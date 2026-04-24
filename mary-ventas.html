@@ -3,98 +3,129 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mary — Registro de Ventas</title>
+<title>Mary — Sistema</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Source Sans 3', sans-serif; background: #fdf8f0; color: #1a1a1a; min-height: 100vh; }
-#loader { position: fixed; inset: 0; background: #fdf8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; gap: 14px; }
-.loader-logo { font-family: 'Playfair Display', serif; font-size: 38px; color: #8b0000; letter-spacing: 5px; }
-.loader-sub { font-size: 11px; letter-spacing: 4px; color: #bbb; text-transform: uppercase; }
-.loader-dot { display: flex; gap: 7px; margin-top: 4px; }
-.loader-dot span { width: 7px; height: 7px; border-radius: 50%; background: #c8a96e; animation: bounce 1s infinite; }
-.loader-dot span:nth-child(2) { animation-delay: 0.15s; }
-.loader-dot span:nth-child(3) { animation-delay: 0.3s; }
-@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-9px)} }
-#app { display: none; max-width: 600px; margin: 0 auto; padding: 0 0 50px; }
-.header { text-align: center; padding: 24px 0 8px; }
-.logo { font-family: 'Playfair Display', serif; font-size: 34px; color: #8b0000; letter-spacing: 5px; }
-.sub { font-size: 10px; letter-spacing: 4px; color: #aaa; text-transform: uppercase; margin-top: 3px; }
-.divider { width: 50px; height: 1.5px; background: #c8a96e; margin: 10px auto; }
-.nav { display: flex; border-bottom: 1px solid #ede4d4; margin: 0 1rem; overflow-x: auto; }
-.nb { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 16px; font-size: 13px; cursor: pointer; color: #aaa; margin-bottom: -1px; font-family: 'Source Sans 3', sans-serif; white-space: nowrap; }
-.nb.on { color: #8b0000; border-bottom-color: #8b0000; font-weight: 600; }
-.card { background: #fff; border: 1px solid #ede4d4; border-radius: 12px; padding: 18px; margin: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.sl { font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: #8b0000; margin-bottom: 14px; font-weight: 600; }
-.metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 1rem; }
-.met { background: #fff; border: 1px solid #ede4d4; border-radius: 10px; padding: 12px 8px; text-align: center; }
-.ml { font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
-.mv { font-size: 18px; font-weight: 600; color: #1a1a1a; margin-top: 3px; }
-.mv.g { color: #0F6E56; }
-.mv.sm { font-size: 13px; margin-top: 5px; }
-.field { margin-bottom: 12px; }
-.field label { display: block; font-size: 11px; color: #aaa; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-.field input, .field select { width: 100%; border: 1px solid #e0d5c5; border-radius: 8px; padding: 9px 12px; font-size: 14px; font-family: 'Source Sans 3', sans-serif; color: #1a1a1a; background: #fff; }
-.field input:focus, .field select:focus { outline: none; border-color: #8b0000; }
-.total-field { color: #0F6E56 !important; font-weight: 600 !important; background: #f0faf5 !important; }
-.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-.btn { background: #8b0000; color: #fff; border: none; border-radius: 8px; padding: 12px; font-size: 14px; cursor: pointer; width: 100%; font-family: 'Source Sans 3', sans-serif; font-weight: 600; margin-top: 4px; }
-.btn:hover { background: #6b0000; }
-.btnd { background: none; border: none; color: #cc3333; font-size: 13px; cursor: pointer; padding: 4px 7px; border-radius: 4px; }
-.fb { background: none; border: 1px solid #e0d5c5; border-radius: 20px; padding: 5px 13px; font-size: 11px; cursor: pointer; color: #888; font-family: 'Source Sans 3', sans-serif; }
-.fb.on { background: #8b0000; color: #fff; border-color: #8b0000; }
-.row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid #f0e8d8; }
-.row:last-child { border-bottom: none; }
-.rn { font-size: 14px; font-weight: 500; color: #1a1a1a; }
-.rm { font-size: 12px; color: #bbb; margin-top: 2px; }
-.ra { font-size: 15px; font-weight: 600; color: #0F6E56; }
-.badge { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; margin-left: 6px; vertical-align: middle; }
-.bd { background: #EAF3DE; color: #3B6D11; }
-.ba { background: #E6F1FB; color: #185FA5; }
-.bc { background: #FAEEDA; color: #854F0B; }
-.bo { background: #F1EFE8; color: #5F5E5A; }
-.empty { text-align: center; padding: 2rem; color: #ccc; font-size: 14px; }
-.bar-row { margin-bottom: 12px; }
-.bar-label { font-size: 12px; color: #aaa; margin-bottom: 4px; display: flex; justify-content: space-between; }
-.bar-bg { height: 16px; background: #f5ede0; border-radius: 4px; overflow: hidden; }
-.bar-fill { height: 100%; background: #8b0000; border-radius: 4px; }
-.prod-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 0.5px solid #f0e8d8; }
-.prod-row:last-child { border-bottom: none; }
-.inp-sm { width: 90px; border: 1px solid #e0d5c5; border-radius: 6px; padding: 6px 8px; font-size: 13px; font-family: 'Source Sans 3', sans-serif; color: #1a1a1a; text-align: center; }
-.frow { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1f4a1f; color: #fff; padding: 10px 22px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; }
-.toast.show { opacity: 1; }
-.error-box { background: #fff0f0; border: 1px solid #ffcccc; border-radius: 8px; padding: 14px; margin: 1rem; font-size: 13px; color: #8b0000; }
-@media (max-width: 420px) { .metrics { grid-template-columns: repeat(2,1fr); } .g3 { grid-template-columns: 1fr 1fr; } }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Source Sans 3',sans-serif;background:#fdf8f0;color:#1a1a1a;min-height:100vh}
+#loader{position:fixed;inset:0;background:#fdf8f0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:14px}
+.loader-logo{font-family:'Playfair Display',serif;font-size:38px;color:#8b0000;letter-spacing:5px}
+.loader-sub{font-size:11px;letter-spacing:4px;color:#bbb;text-transform:uppercase}
+.loader-dot{display:flex;gap:7px;margin-top:4px}
+.loader-dot span{width:7px;height:7px;border-radius:50%;background:#c8a96e;animation:bounce 1s infinite}
+.loader-dot span:nth-child(2){animation-delay:.15s}
+.loader-dot span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-9px)}}
+#app{display:none;max-width:600px;margin:0 auto;padding:0 0 60px}
+.header{text-align:center;padding:20px 0 6px}
+.logo{font-family:'Playfair Display',serif;font-size:32px;color:#8b0000;letter-spacing:5px}
+.sub{font-size:10px;letter-spacing:4px;color:#aaa;text-transform:uppercase;margin-top:2px}
+.divider{width:50px;height:1.5px;background:#c8a96e;margin:8px auto}
+.nav{display:flex;border-bottom:1px solid #ede4d4;margin:0 1rem;overflow-x:auto}
+.nb{background:none;border:none;border-bottom:2px solid transparent;padding:9px 12px;font-size:12px;cursor:pointer;color:#aaa;margin-bottom:-1px;font-family:'Source Sans 3',sans-serif;white-space:nowrap}
+.nb.on{color:#8b0000;border-bottom-color:#8b0000;font-weight:600}
+.card{background:#fff;border:1px solid #ede4d4;border-radius:12px;padding:16px;margin:1rem;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.sl{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:#8b0000;margin-bottom:12px;font-weight:600}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:1rem}
+.met{background:#fff;border:1px solid #ede4d4;border-radius:10px;padding:10px 6px;text-align:center}
+.ml{font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:.5px}
+.mv{font-size:17px;font-weight:600;color:#1a1a1a;margin-top:2px}
+.mv.g{color:#0F6E56}
+.mv.r{color:#8b0000}
+.mv.sm{font-size:12px;margin-top:4px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11px;color:#aaa;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+.field input,.field select,.field textarea{width:100%;border:1px solid #e0d5c5;border-radius:8px;padding:8px 11px;font-size:14px;font-family:'Source Sans 3',sans-serif;color:#1a1a1a;background:#fff}
+.field input:focus,.field select:focus{outline:none;border-color:#8b0000}
+.total-field{color:#0F6E56!important;font-weight:600!important;background:#f0faf5!important}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.btn{background:#8b0000;color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;cursor:pointer;width:100%;font-family:'Source Sans 3',sans-serif;font-weight:600;margin-top:4px}
+.btn:hover{background:#6b0000}
+.btn-g{background:#0F6E56}
+.btn-g:hover{background:#0a5040}
+.btn-o{background:#854F0B}
+.btn-o:hover{background:#6a3e08}
+.btn-sm{padding:7px 14px;font-size:12px;width:auto;border-radius:6px}
+.btnd{background:none;border:none;color:#cc3333;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:4px}
+.fb{background:none;border:1px solid #e0d5c5;border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;color:#888;font-family:'Source Sans 3',sans-serif}
+.fb.on{background:#8b0000;color:#fff;border-color:#8b0000}
+.row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:.5px solid #f0e8d8}
+.row:last-child{border-bottom:none}
+.rn{font-size:14px;font-weight:500;color:#1a1a1a}
+.rm{font-size:12px;color:#bbb;margin-top:2px}
+.ra{font-size:14px;font-weight:600;color:#0F6E56}
+.badge{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;margin-left:5px;vertical-align:middle}
+.bd{background:#EAF3DE;color:#3B6D11}
+.ba{background:#E6F1FB;color:#185FA5}
+.bc{background:#FAEEDA;color:#854F0B}
+.bo{background:#F1EFE8;color:#5F5E5A}
+.bp{background:#FBEAF0;color:#993556}
+.br{background:#FCEBEB;color:#A32D2D}
+.empty{text-align:center;padding:1.5rem;color:#ccc;font-size:13px}
+.bar-row{margin-bottom:10px}
+.bar-label{font-size:12px;color:#aaa;margin-bottom:3px;display:flex;justify-content:space-between}
+.bar-bg{height:14px;background:#f5ede0;border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;background:#8b0000;border-radius:4px}
+.prod-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:.5px solid #f0e8d8}
+.prod-row:last-child{border-bottom:none}
+.inp-sm{width:85px;border:1px solid #e0d5c5;border-radius:6px;padding:5px 8px;font-size:13px;font-family:'Source Sans 3',sans-serif;color:#1a1a1a;text-align:center}
+.frow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f4a1f;color:#fff;padding:10px 22px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{opacity:1}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+.dot-in{background:#3B6D11}
+.dot-out{background:#854F0B}
+.dot-abs{background:#A32D2D}
+.dot-none{background:#ccc}
+/* Personal detail */
+.back-btn{background:none;border:none;color:#8b0000;font-size:13px;cursor:pointer;font-family:'Source Sans 3',sans-serif;padding:0;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.sub-nav{display:flex;gap:0;border-bottom:1px solid #ede4d4;margin:0 1rem 0}
+.snb{background:none;border:none;border-bottom:2px solid transparent;padding:8px 12px;font-size:12px;cursor:pointer;color:#aaa;margin-bottom:-1px;font-family:'Source Sans 3',sans-serif;white-space:nowrap}
+.snb.on{color:#8b0000;border-bottom-color:#8b0000;font-weight:600}
+.emp-header{display:flex;align-items:center;gap:12px;padding:12px 1rem 0}
+.emp-avatar{width:46px;height:46px;border-radius:50%;background:#f5ede0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:#8b0000;flex-shrink:0}
+.emp-name{font-size:17px;font-weight:600;color:#1a1a1a}
+.emp-cargo{font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:.5px}
+.resumen-box{background:#f9f5ef;border-radius:10px;padding:14px;margin-bottom:10px}
+.resumen-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px}
+.resumen-row.total{font-weight:600;font-size:15px;border-top:1px solid #e0d5c5;margin-top:6px;padding-top:10px}
+.asis-btns{display:flex;gap:6px;margin-top:8px}
+.asis-btn{flex:1;border:none;border-radius:8px;padding:8px;font-size:12px;font-family:'Source Sans 3',sans-serif;font-weight:600;cursor:pointer}
+.ab-in{background:#EAF3DE;color:#3B6D11}
+.ab-out{background:#FAEEDA;color:#854F0B}
+.ab-abs{background:#FCEBEB;color:#A32D2D}
+.tag-ef{background:#E6F1FB;color:#185FA5;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.tag-pr{background:#FBEAF0;color:#993556;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.tag-pa{background:#EAF3DE;color:#3B6D11;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+@media(max-width:420px){.metrics{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
-
 <div id="loader">
   <div class="loader-logo">Mary</div>
   <div class="loader-sub">Conectando...</div>
   <div class="loader-dot"><span></span><span></span><span></span></div>
 </div>
-
 <div id="app">
   <div class="header">
     <div class="logo">Mary</div>
-    <div class="sub">Registro de Ventas</div>
+    <div class="sub">Sistema de Gestion</div>
     <div class="divider"></div>
   </div>
   <nav class="nav">
     <button class="nb on" onclick="showTab('dashboard')">Resumen</button>
-    <button class="nb" onclick="showTab('nueva')">+ Nueva venta</button>
+    <button class="nb" onclick="showTab('nueva')">+ Venta</button>
     <button class="nb" onclick="showTab('historial')">Historial</button>
+    <button class="nb" onclick="showTab('personal')">Personal</button>
     <button class="nb" onclick="showTab('productos')">Productos</button>
   </nav>
   <div id="dashboard"></div>
   <div id="nueva" style="display:none"></div>
   <div id="historial" style="display:none"></div>
+  <div id="personal" style="display:none"></div>
   <div id="productos" style="display:none"></div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -109,286 +140,572 @@ var firebaseConfig = {
   messagingSenderId: "499224458217",
   appId: "1:499224458217:web:80c08c756631359e575178"
 };
-
 firebase.initializeApp(firebaseConfig);
 var db = firebase.database();
 
-var ventas = [];
-var productos = [];
-var activeTab = 'dashboard';
-var filterTurno = 'todos';
-var filterDate = '';
+var ventas=[],productos=[],personal=[],asistencias=[],adelantos=[],pagos=[];
+var activeTab='dashboard',filterTurno='todos',filterDate='';
+var selectedEmpId=null,selectedEmpSubTab='asistencia';
+var filterAsisDate='',filterMes='';
 
-var defaultProductos = [
-  { nombre: 'Pollo a la brasa', precio: 18, turno: 'almuerzo' },
-  { nombre: 'Desayuno completo', precio: 8, turno: 'desayuno' },
-  { nombre: 'Menu almuerzo', precio: 10, turno: 'almuerzo' },
-  { nombre: 'Menu cena', precio: 10, turno: 'cena' },
-  { nombre: 'Porcion de pollo', precio: 12, turno: 'almuerzo' }
+var defaultProductos=[
+  {nombre:'Pollo a la brasa',precio:18,turno:'almuerzo'},
+  {nombre:'Desayuno completo',precio:8,turno:'desayuno'},
+  {nombre:'Menu almuerzo',precio:10,turno:'almuerzo'},
+  {nombre:'Menu cena',precio:10,turno:'cena'},
+  {nombre:'Porcion de pollo',precio:12,turno:'almuerzo'}
 ];
 
-function today() { return new Date().toISOString().split('T')[0]; }
-function fmtDate(d) { var p = d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
-function fmt(n) { return 'S/ '+parseFloat(n).toFixed(2); }
-function turnoClass(t) { return t==='desayuno'?'bd':t==='almuerzo'?'ba':t==='cena'?'bc':'bo'; }
-function turnoLabel(t) { return t.charAt(0).toUpperCase()+t.slice(1); }
+function today(){return new Date().toISOString().split('T')[0]}
+function mesActual(){return today().slice(0,7)}
+function fmtDate(d){var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
+function fmt(n){return'S/ '+parseFloat(n).toFixed(2)}
+function turnoClass(t){return t==='desayuno'?'bd':t==='almuerzo'?'ba':t==='cena'?'bc':'bo'}
+function turnoLabel(t){return t.charAt(0).toUpperCase()+t.slice(1)}
+function nowTime(){var n=new Date();return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0')}
+function initials(n){var p=n.trim().split(' ');return(p[0][0]+(p[1]?p[1][0]:'')).toUpperCase()}
+function getMes(){return filterMes||mesActual()}
 
-function showToast(msg, error) {
-  var el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.background = error ? '#7a1f1f' : '#1f4a1f';
-  el.classList.add('show');
-  setTimeout(function(){ el.classList.remove('show'); }, 2500);
+function showToast(msg,error){
+  var el=document.getElementById('toast');
+  el.textContent=msg;el.style.background=error?'#7a1f1f':'#1f4a1f';
+  el.classList.add('show');setTimeout(function(){el.classList.remove('show')},2500);
 }
 
-// Escuchar productos
-db.ref('productos').on('value', function(snap) {
-  productos = [];
-  snap.forEach(function(child) {
-    productos.push(Object.assign({ id: child.key }, child.val()));
-  });
-  productos.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
-  if (productos.length === 0) {
-    defaultProductos.forEach(function(p) { db.ref('productos').push(p); });
-  }
+db.ref('productos').on('value',function(snap){
+  productos=[];snap.forEach(function(c){productos.push(Object.assign({id:c.key},c.val()))});
+  productos.sort(function(a,b){return a.nombre.localeCompare(b.nombre)});
+  if(productos.length===0){defaultProductos.forEach(function(p){db.ref('productos').push(p)})}
   render();
-}, function(err) {
-  console.error('Error productos:', err);
 });
-
-// Escuchar ventas
-db.ref('ventas').on('value', function(snap) {
-  ventas = [];
-  snap.forEach(function(child) {
-    ventas.push(Object.assign({ id: child.key }, child.val()));
-  });
-  ventas.sort(function(a,b){ return (b.timestamp||'').localeCompare(a.timestamp||''); });
+db.ref('ventas').on('value',function(snap){
+  ventas=[];snap.forEach(function(c){ventas.push(Object.assign({id:c.key},c.val()))});
+  ventas.sort(function(a,b){return(b.timestamp||'').localeCompare(a.timestamp||'')});
   render();
-  document.getElementById('loader').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-}, function(err) {
-  console.error('Error ventas:', err);
-  document.getElementById('loader').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('dashboard').innerHTML = '<div class="error-box">Error al conectar con la base de datos. Verifica las reglas de Firebase.</div>';
+  document.getElementById('loader').style.display='none';
+  document.getElementById('app').style.display='block';
+},function(){
+  document.getElementById('loader').style.display='none';
+  document.getElementById('app').style.display='block';
 });
-
-// Timeout por si Firebase no responde
-setTimeout(function() {
-  if (document.getElementById('loader').style.display !== 'none') {
-    document.getElementById('loader').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
+db.ref('personal').on('value',function(snap){
+  personal=[];snap.forEach(function(c){personal.push(Object.assign({id:c.key},c.val()))});
+  personal.sort(function(a,b){return a.nombre.localeCompare(b.nombre)});render();
+});
+db.ref('asistencias').on('value',function(snap){
+  asistencias=[];snap.forEach(function(c){asistencias.push(Object.assign({id:c.key},c.val()))});render();
+});
+db.ref('adelantos').on('value',function(snap){
+  adelantos=[];snap.forEach(function(c){adelantos.push(Object.assign({id:c.key},c.val()))});render();
+});
+db.ref('pagos').on('value',function(snap){
+  pagos=[];snap.forEach(function(c){pagos.push(Object.assign({id:c.key},c.val()))});render();
+});
+setTimeout(function(){
+  if(document.getElementById('loader').style.display!=='none'){
+    document.getElementById('loader').style.display='none';
+    document.getElementById('app').style.display='block';
   }
-}, 5000);
+},5000);
 
-function showTab(name) {
-  activeTab = name;
-  document.querySelectorAll('.nb').forEach(function(b, i) {
-    b.classList.toggle('on', ['dashboard','nueva','historial','productos'][i] === name);
+function showTab(name){
+  activeTab=name;selectedEmpId=null;
+  document.querySelectorAll('.nb').forEach(function(b,i){
+    b.classList.toggle('on',['dashboard','nueva','historial','personal','productos'][i]===name);
   });
-  ['dashboard','nueva','historial','productos'].forEach(function(t) {
-    document.getElementById(t).style.display = t===name ? 'block' : 'none';
+  ['dashboard','nueva','historial','personal','productos'].forEach(function(t){
+    document.getElementById(t).style.display=t===name?'block':'none';
   });
   render();
 }
 
-function render() {
-  if (activeTab==='dashboard') renderDashboard();
-  else if (activeTab==='nueva') renderNueva();
-  else if (activeTab==='historial') renderHistorial();
-  else if (activeTab==='productos') renderProductos();
+function render(){
+  if(activeTab==='dashboard')renderDashboard();
+  else if(activeTab==='nueva')renderNueva();
+  else if(activeTab==='historial')renderHistorial();
+  else if(activeTab==='personal'){if(selectedEmpId)renderEmpDetail();else renderPersonalList();}
+  else if(activeTab==='productos')renderProductos();
 }
 
-function renderDashboard() {
-  var hoy = ventas.filter(function(v){ return v.fecha === today(); });
-  var total = hoy.reduce(function(a,v){ return a+v.total; }, 0);
-  var byTurno = function(t){ return hoy.filter(function(v){ return v.turno===t; }).reduce(function(a,v){ return a+v.total; }, 0); };
-  var d=byTurno('desayuno'), al=byTurno('almuerzo'), c=byTurno('cena');
-  var maxBar = Math.max(d,al,c,1);
-  var topProds = {};
-  hoy.forEach(function(v){ topProds[v.producto] = (topProds[v.producto]||0)+v.cantidad; });
-  var top = Object.entries(topProds).sort(function(a,b){ return b[1]-a[1]; }).slice(0,4);
+// ── DASHBOARD ────────────────────────────────────────────────
+function renderDashboard(){
+  var hoy=ventas.filter(function(v){return v.fecha===today()});
+  var total=hoy.reduce(function(a,v){return a+v.total},0);
+  var byT=function(t){return hoy.filter(function(v){return v.turno===t}).reduce(function(a,v){return a+v.total},0)};
+  var d=byT('desayuno'),al=byT('almuerzo'),c=byT('cena');
+  var maxBar=Math.max(d,al,c,1);
+  var asisHoy=asistencias.filter(function(a){return a.fecha===today()});
+  var presIds=[];asisHoy.forEach(function(a){if((a.estado==='entrada'||a.estado==='salida')&&presIds.indexOf(a.personalId)<0)presIds.push(a.personalId)});
 
-  var html = '<div class="metrics">';
-  html += '<div class="met"><div class="ml">Total hoy</div><div class="mv g">'+fmt(total)+'</div></div>';
-  html += '<div class="met"><div class="ml">Ventas</div><div class="mv">'+hoy.length+'</div></div>';
-  html += '<div class="met"><div class="ml">Promedio</div><div class="mv">'+(hoy.length?fmt(total/hoy.length):'S/ 0')+'</div></div>';
-  html += '<div class="met"><div class="ml">Fecha</div><div class="mv sm">'+fmtDate(today())+'</div></div>';
-  html += '</div>';
-
-  html += '<div class="card"><div class="sl">Ventas por turno hoy</div>';
-  [['desayuno',d],['almuerzo',al],['cena',c]].forEach(function(item){
-    html += '<div class="bar-row"><div class="bar-label"><span>'+turnoLabel(item[0])+'</span><span>'+fmt(item[1])+'</span></div>';
-    html += '<div class="bar-bg"><div class="bar-fill" style="width:'+((item[1]/maxBar*100).toFixed(0))+'%"></div></div></div>';
+  var html='<div class="metrics">';
+  html+='<div class="met"><div class="ml">Total hoy</div><div class="mv g">'+fmt(total)+'</div></div>';
+  html+='<div class="met"><div class="ml">Ventas</div><div class="mv">'+hoy.length+'</div></div>';
+  html+='<div class="met"><div class="ml">Personal</div><div class="mv">'+presIds.length+'/'+personal.length+'</div></div>';
+  html+='<div class="met"><div class="ml">Fecha</div><div class="mv sm">'+fmtDate(today())+'</div></div>';
+  html+='</div>';
+  html+='<div class="card"><div class="sl">Ventas por turno hoy</div>';
+  [['desayuno',d],['almuerzo',al],['cena',c]].forEach(function(it){
+    html+='<div class="bar-row"><div class="bar-label"><span>'+turnoLabel(it[0])+'</span><span>'+fmt(it[1])+'</span></div>';
+    html+='<div class="bar-bg"><div class="bar-fill" style="width:'+((it[1]/maxBar*100).toFixed(0))+'%"></div></div></div>';
   });
-  html += '</div>';
-
-  if (top.length) {
-    html += '<div class="card"><div class="sl">Mas vendido hoy</div>';
-    top.forEach(function(item){ html += '<div class="row"><div class="rn">'+item[0]+'</div><div class="ra">'+item[1]+' unid.</div></div>'; });
-    html += '</div>';
-  }
-
-  html += '<div class="card"><div class="sl">Ultimas ventas</div>';
-  if (hoy.length === 0) {
-    html += '<div class="empty">Sin ventas registradas hoy</div>';
-  } else {
-    hoy.slice(0,8).forEach(function(v){
-      html += '<div class="row"><div><div class="rn">'+v.producto+'<span class="badge '+turnoClass(v.turno)+'">'+turnoLabel(v.turno)+'</span></div>';
-      html += '<div class="rm">'+v.cantidad+' x '+fmt(v.precioUnit)+' - '+v.hora+(v.obs?' - '+v.obs:'')+'</div></div>';
-      html += '<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div>';
-      html += '<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>';
-    });
-  }
-  html += '</div>';
-  document.getElementById('dashboard').innerHTML = html;
+  html+='</div>';
+  html+='<div class="card"><div class="sl">Asistencia hoy</div>';
+  if(personal.length===0){html+='<div class="empty">Sin personal registrado</div>';}
+  else{personal.forEach(function(p){
+    var regs=asisHoy.filter(function(a){return a.personalId===p.id});
+    var ult=regs.length?regs[regs.length-1]:null;
+    var dc='dot-none',et='Sin registrar';
+    if(ult){if(ult.estado==='entrada'){dc='dot-in';et='Entrada '+ult.hora;}else if(ult.estado==='salida'){dc='dot-out';et='Salio '+ult.hora;}else{dc='dot-abs';et='Ausente';}}
+    html+='<div class="row"><div class="rn">'+p.nombre+'<span class="badge bp">'+p.cargo+'</span></div>';
+    html+='<div style="display:flex;align-items:center;font-size:12px;color:#888"><span class="dot '+dc+'"></span>'+et+'</div></div>';
+  });}
+  html+='</div>';
+  html+='<div class="card"><div class="sl">Ultimas ventas</div>';
+  if(hoy.length===0){html+='<div class="empty">Sin ventas hoy</div>';}
+  else{hoy.slice(0,6).forEach(function(v){
+    html+='<div class="row"><div><div class="rn">'+v.producto+'<span class="badge '+turnoClass(v.turno)+'">'+turnoLabel(v.turno)+'</span></div>';
+    html+='<div class="rm">'+v.cantidad+' x '+fmt(v.precioUnit)+' - '+v.hora+'</div></div>';
+    html+='<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div>';
+    html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>';
+  });}
+  html+='</div>';
+  document.getElementById('dashboard').innerHTML=html;
 }
 
-function renderNueva() {
-  var opts = productos.map(function(p){
-    return '<option value="'+p.id+'" data-precio="'+p.precio+'" data-turno="'+p.turno+'">'+p.nombre+' - '+fmt(p.precio)+'</option>';
-  }).join('');
-  var html = '<div class="card"><div class="sl">Registrar venta</div>';
-  html += '<div class="field"><label>Producto</label><select id="np-prod" onchange="actualizarPrecio()">'+opts+'</select></div>';
-  html += '<div class="g3">';
-  html += '<div class="field"><label>Cantidad</label><input type="number" id="np-cant" value="1" min="1" oninput="calcTotal()"></div>';
-  html += '<div class="field"><label>Precio (S/)</label><input type="number" id="np-precio" step="0.5" oninput="calcTotal()"></div>';
-  html += '<div class="field"><label>Total</label><input type="text" id="np-total" readonly class="total-field"></div>';
-  html += '</div><div class="g2">';
-  html += '<div class="field"><label>Turno</label><select id="np-turno"><option value="desayuno">Desayuno</option><option value="almuerzo" selected>Almuerzo</option><option value="cena">Cena</option><option value="otro">Otro</option></select></div>';
-  html += '<div class="field"><label>Fecha</label><input type="date" id="np-fecha" value="'+today()+'"></div>';
-  html += '</div><div class="field"><label>Observacion (opcional)</label><input type="text" id="np-obs" placeholder="Ej: para llevar..."></div>';
-  html += '<button class="btn" onclick="guardarVenta()">Registrar venta</button></div>';
-  document.getElementById('nueva').innerHTML = html;
+// ── NUEVA VENTA ───────────────────────────────────────────────
+function renderNueva(){
+  var opts=productos.map(function(p){return'<option value="'+p.id+'" data-precio="'+p.precio+'" data-turno="'+p.turno+'">'+p.nombre+' - '+fmt(p.precio)+'</option>'}).join('');
+  var html='<div class="card"><div class="sl">Registrar venta</div>';
+  html+='<div class="field"><label>Producto</label><select id="np-prod" onchange="actualizarPrecio()">'+opts+'</select></div>';
+  html+='<div class="g3"><div class="field"><label>Cantidad</label><input type="number" id="np-cant" value="1" min="1" oninput="calcTotal()"></div>';
+  html+='<div class="field"><label>Precio (S/)</label><input type="number" id="np-precio" step="0.5" oninput="calcTotal()"></div>';
+  html+='<div class="field"><label>Total</label><input type="text" id="np-total" readonly class="total-field"></div></div>';
+  html+='<div class="g2"><div class="field"><label>Turno</label><select id="np-turno"><option value="desayuno">Desayuno</option><option value="almuerzo" selected>Almuerzo</option><option value="cena">Cena</option><option value="otro">Otro</option></select></div>';
+  html+='<div class="field"><label>Fecha</label><input type="date" id="np-fecha" value="'+today()+'"></div></div>';
+  html+='<div class="field"><label>Observacion</label><input type="text" id="np-obs" placeholder="Ej: para llevar..."></div>';
+  html+='<button class="btn" onclick="guardarVenta()">Registrar venta</button></div>';
+  document.getElementById('nueva').innerHTML=html;
   actualizarPrecio();
 }
-
-function actualizarPrecio() {
-  var sel = document.getElementById('np-prod');
-  if (!sel) return;
-  var opt = sel.options[sel.selectedIndex];
-  document.getElementById('np-precio').value = opt.dataset.precio;
-  var turno = opt.dataset.turno;
-  if (['desayuno','almuerzo','cena'].indexOf(turno) >= 0) document.getElementById('np-turno').value = turno;
+function actualizarPrecio(){
+  var sel=document.getElementById('np-prod');if(!sel)return;
+  var opt=sel.options[sel.selectedIndex];
+  document.getElementById('np-precio').value=opt.dataset.precio;
+  var t=opt.dataset.turno;
+  if(['desayuno','almuerzo','cena'].indexOf(t)>=0)document.getElementById('np-turno').value=t;
   calcTotal();
 }
-
-function calcTotal() {
-  var cant = parseFloat(document.getElementById('np-cant').value)||0;
-  var precio = parseFloat(document.getElementById('np-precio').value)||0;
-  var el = document.getElementById('np-total');
-  if (el) el.value = fmt(cant*precio);
+function calcTotal(){
+  var cant=parseFloat(document.getElementById('np-cant').value)||0;
+  var precio=parseFloat(document.getElementById('np-precio').value)||0;
+  var el=document.getElementById('np-total');if(el)el.value=fmt(cant*precio);
+}
+function guardarVenta(){
+  var sel=document.getElementById('np-prod');
+  var prod=null;for(var i=0;i<productos.length;i++){if(productos[i].id===sel.value){prod=productos[i];break;}}
+  var cant=parseFloat(document.getElementById('np-cant').value)||1;
+  var precio=parseFloat(document.getElementById('np-precio').value)||0;
+  var turno=document.getElementById('np-turno').value;
+  var fecha=document.getElementById('np-fecha').value||today();
+  var obs=document.getElementById('np-obs').value;
+  if(!prod||cant<=0||precio<=0){showToast('Completa todos los campos',true);return;}
+  var hora=nowTime();
+  db.ref('ventas').push({producto:prod.nombre,prodId:prod.id,cantidad:cant,precioUnit:precio,total:cant*precio,turno:turno,fecha:fecha,hora:hora,obs:obs,timestamp:new Date().toISOString()})
+    .then(function(){showToast('Venta registrada - '+fmt(cant*precio));showTab('dashboard');})
+    .catch(function(){showToast('Error al guardar',true);});
+}
+function eliminarVenta(id){
+  if(!confirm('Eliminar esta venta?'))return;
+  db.ref('ventas/'+id).remove().then(function(){showToast('Venta eliminada');});
 }
 
-function guardarVenta() {
-  var sel = document.getElementById('np-prod');
-  var prod = null;
-  for (var i=0; i<productos.length; i++) { if (productos[i].id===sel.value) { prod=productos[i]; break; } }
-  var cant = parseFloat(document.getElementById('np-cant').value)||1;
-  var precio = parseFloat(document.getElementById('np-precio').value)||0;
-  var turno = document.getElementById('np-turno').value;
-  var fecha = document.getElementById('np-fecha').value||today();
-  var obs = document.getElementById('np-obs').value;
-  if (!prod||cant<=0||precio<=0) { showToast('Completa todos los campos', true); return; }
-  var now = new Date();
-  var hora = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  db.ref('ventas').push({
-    producto: prod.nombre, prodId: prod.id,
-    cantidad: cant, precioUnit: precio, total: cant*precio,
-    turno: turno, fecha: fecha, hora: hora, obs: obs,
-    timestamp: now.toISOString()
-  }).then(function(){
-    showToast('Venta registrada - '+fmt(cant*precio));
-    showTab('dashboard');
-  }).catch(function(e){ showToast('Error al guardar', true); console.error(e); });
-}
-
-function eliminarVenta(id) {
-  if (!confirm('Eliminar esta venta?')) return;
-  db.ref('ventas/'+id).remove()
-    .then(function(){ showToast('Venta eliminada'); })
-    .catch(function(){ showToast('Error', true); });
-}
-
-function renderHistorial() {
-  var filtradas = ventas.filter(function(v){
-    if (filterTurno!=='todos' && v.turno!==filterTurno) return false;
-    if (filterDate && v.fecha!==filterDate) return false;
+// ── HISTORIAL ────────────────────────────────────────────────
+function renderHistorial(){
+  var filtradas=ventas.filter(function(v){
+    if(filterTurno!=='todos'&&v.turno!==filterTurno)return false;
+    if(filterDate&&v.fecha!==filterDate)return false;
     return true;
   });
-  var totalFiltrado = filtradas.reduce(function(a,v){ return a+v.total; }, 0);
-
-  var html = '<div class="card"><div class="sl">Filtros</div><div class="frow">';
+  var totalFiltrado=filtradas.reduce(function(a,v){return a+v.total},0);
+  var html='<div class="card"><div class="sl">Filtros</div><div class="frow">';
   ['todos','desayuno','almuerzo','cena'].forEach(function(t){
-    html += '<button class="fb '+(filterTurno===t?'on':'')+'" onclick="setFilter(\''+t+'\')">'+(t==='todos'?'Todos':turnoLabel(t))+'</button>';
+    html+='<button class="fb '+(filterTurno===t?'on':'')+'" onclick="setFilter(\''+t+'\')">'+(t==='todos'?'Todos':turnoLabel(t))+'</button>';
   });
-  html += '</div><div class="field"><label>Por fecha</label><input type="date" value="'+filterDate+'" onchange="setFilterDate(this.value)" style="max-width:200px"></div></div>';
+  html+='</div><div class="field"><label>Por fecha</label><input type="date" value="'+filterDate+'" onchange="setFilterDate(this.value)" style="max-width:200px"></div></div>';
+  html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">';
+  html+='<div class="sl" style="margin:0">'+filtradas.length+' ventas</div>';
+  html+='<div style="font-size:15px;font-weight:600;color:#0F6E56">'+fmt(totalFiltrado)+'</div></div>';
+  if(filtradas.length===0){html+='<div class="empty">Sin ventas</div>';}
+  else{filtradas.forEach(function(v){
+    html+='<div class="row"><div><div class="rn">'+v.producto+'<span class="badge '+turnoClass(v.turno)+'">'+turnoLabel(v.turno)+'</span></div>';
+    html+='<div class="rm">'+fmtDate(v.fecha)+' '+v.hora+' - '+v.cantidad+' x '+fmt(v.precioUnit)+(v.obs?' - '+v.obs:'')+'</div></div>';
+    html+='<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div>';
+    html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>';
+  });}
+  html+='</div>';
+  document.getElementById('historial').innerHTML=html;
+}
+function setFilter(t){filterTurno=t;render();}
+function setFilterDate(d){filterDate=d;render();}
 
-  html += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">';
-  html += '<div class="sl" style="margin:0">'+filtradas.length+' ventas</div>';
-  html += '<div style="font-size:15px;font-weight:600;color:#0F6E56">'+fmt(totalFiltrado)+'</div></div>';
+// ── PERSONAL LISTA ────────────────────────────────────────────
+function renderPersonalList(){
+  var html='<div class="card"><div class="sl">Personal</div>';
+  if(personal.length===0){html+='<div class="empty">Sin empleados registrados</div>';}
+  else{personal.forEach(function(p){
+    var mes=getMes();
+    var adEmp=adelantos.filter(function(a){return a.personalId===p.id&&a.fecha.slice(0,7)===mes&&!a.liquidado});
+    var paEmp=pagos.filter(function(a){return a.personalId===p.id&&a.fecha.slice(0,7)===mes});
+    var totalAd=adEmp.reduce(function(a,x){return a+x.monto},0);
+    var totalPa=paEmp.reduce(function(a,x){return a+x.monto},0);
+    var saldo=(p.sueldo||0)-totalAd-totalPa;
+    var asisHoy=asistencias.filter(function(a){return a.personalId===p.id&&a.fecha===today()});
+    var ult=asisHoy.length?asisHoy[asisHoy.length-1]:null;
+    var dc='dot-none';
+    if(ult){dc=ult.estado==='entrada'?'dot-in':ult.estado==='salida'?'dot-out':'dot-abs';}
+    html+='<div class="row" style="cursor:pointer" onclick="openEmp(\''+p.id+'\')">';
+    html+='<div style="display:flex;align-items:center;gap:10px">';
+    html+='<div class="emp-avatar" style="width:38px;height:38px;font-size:14px">'+initials(p.nombre)+'</div>';
+    html+='<div><div class="rn"><span class="dot '+dc+'"></span>'+p.nombre+'</div>';
+    html+='<div class="rm">'+p.cargo+' · Sueldo: '+fmt(p.sueldo||0)+'</div></div></div>';
+    html+='<div style="text-align:right"><div style="font-size:13px;font-weight:600;color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</div>';
+    html+='<div style="font-size:10px;color:#aaa">saldo mes</div></div></div>';
+  });}
+  html+='</div>';
+  html+='<div class="card"><div class="sl">Agregar empleado</div>';
+  html+='<div class="g2"><div class="field"><label>Nombre completo</label><input type="text" id="per-nom" placeholder="Ej: Juan Perez"></div>';
+  html+='<div class="field"><label>Cargo</label><select id="per-cargo"><option value="Cocinero">Cocinero</option><option value="Mesero">Mesero</option><option value="Cajero">Cajero</option><option value="Ayudante">Ayudante</option><option value="Otro">Otro</option></select></div></div>';
+  html+='<div class="field"><label>Sueldo base (S/)</label><input type="number" id="per-sueldo" placeholder="Ej: 1200" step="50"></div>';
+  html+='<button class="btn" onclick="agregarPersonal()">Agregar empleado</button></div>';
+  document.getElementById('personal').innerHTML=html;
+}
 
-  if (filtradas.length===0) {
-    html += '<div class="empty">Sin ventas en este periodo</div>';
-  } else {
-    filtradas.forEach(function(v){
-      html += '<div class="row"><div><div class="rn">'+v.producto+'<span class="badge '+turnoClass(v.turno)+'">'+turnoLabel(v.turno)+'</span></div>';
-      html += '<div class="rm">'+fmtDate(v.fecha)+' '+v.hora+' - '+v.cantidad+' x '+fmt(v.precioUnit)+(v.obs?' - '+v.obs:'')+'</div></div>';
-      html += '<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div>';
-      html += '<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>';
+function openEmp(id){selectedEmpId=id;selectedEmpSubTab='asistencia';render();}
+
+// ── EMPLEADO DETALLE ──────────────────────────────────────────
+function renderEmpDetail(){
+  var emp=null;for(var i=0;i<personal.length;i++){if(personal[i].id===selectedEmpId){emp=personal[i];break;}}
+  if(!emp){selectedEmpId=null;render();return;}
+  var mes=filterMes||mesActual();
+
+  var html='<div style="padding:12px 1rem 0">';
+  html+='<button class="back-btn" onclick="volverPersonal()">← Volver</button>';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between">';
+  html+='<div style="display:flex;align-items:center;gap:10px">';
+  html+='<div class="emp-avatar">'+initials(emp.nombre)+'</div>';
+  html+='<div><div class="emp-name">'+emp.nombre+'</div><div class="emp-cargo">'+emp.cargo+'</div></div></div>';
+  html+='<button class="btnd" onclick="eliminarPersonal(\''+emp.id+'\')">Eliminar</button></div></div>';
+
+  html+='<nav class="sub-nav"><button class="snb '+(selectedEmpSubTab==='asistencia'?'on':'')+'" onclick="subTab(\'asistencia\')">Asistencia</button>';
+  html+='<button class="snb '+(selectedEmpSubTab==='adelantos'?'on':'')+'" onclick="subTab(\'adelantos\')">Adelantos</button>';
+  html+='<button class="snb '+(selectedEmpSubTab==='pagos'?'on':'')+'" onclick="subTab(\'pagos\')">Pagos</button>';
+  html+='<button class="snb '+(selectedEmpSubTab==='liquidacion'?'on':'')+'" onclick="subTab(\'liquidacion\')">Liquidacion</button></nav>';
+
+  if(selectedEmpSubTab==='asistencia')html+=renderSubAsistencia(emp,mes);
+  else if(selectedEmpSubTab==='adelantos')html+=renderSubAdelantos(emp,mes);
+  else if(selectedEmpSubTab==='pagos')html+=renderSubPagos(emp,mes);
+  else if(selectedEmpSubTab==='liquidacion')html+=renderSubLiquidacion(emp,mes);
+
+  document.getElementById('personal').innerHTML=html;
+}
+
+function subTab(t){selectedEmpSubTab=t;render();}
+function volverPersonal(){selectedEmpId=null;render();}
+
+// SUB: ASISTENCIA
+function renderSubAsistencia(emp,mes){
+  var fechaFiltro=filterAsisDate||today();
+  var asisEmp=asistencias.filter(function(a){return a.personalId===emp.id&&a.fecha===fechaFiltro});
+  var ult=asisEmp.length?asisEmp[asisEmp.length-1]:null;
+  var dc='dot-none',et='Sin registrar';
+  if(ult){if(ult.estado==='entrada'){dc='dot-in';et='Entrada: '+ult.hora;}else if(ult.estado==='salida'){dc='dot-out';et='Salio: '+ult.hora;}else{dc='dot-abs';et='Ausente';}}
+
+  // Resumen del mes
+  var asisMes=asistencias.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
+  var diasTrabajados=[];asisMes.forEach(function(a){if(a.estado==='entrada'&&diasTrabajados.indexOf(a.fecha)<0)diasTrabajados.push(a.fecha);});
+  var diasFalta=[];asisMes.forEach(function(a){if(a.estado==='ausente'&&diasFalta.indexOf(a.fecha)<0)diasFalta.push(a.fecha);});
+
+  var html='<div class="card"><div class="sl">Marcar asistencia</div>';
+  html+='<div class="field"><label>Fecha</label><input type="date" id="asis-fecha" value="'+fechaFiltro+'" onchange="setAsisDate(this.value)" style="max-width:200px"></div>';
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="dot '+dc+'"></span><span style="font-size:13px;color:#888">'+et+'</span></div>';
+  html+='<div class="asis-btns">';
+  html+='<button class="asis-btn ab-in" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'entrada\')">Entrada</button>';
+  html+='<button class="asis-btn ab-out" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'salida\')">Salida</button>';
+  html+='<button class="asis-btn ab-abs" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'ausente\')">Falta</button>';
+  html+='</div>';
+  if(asisEmp.length>0){
+    html+='<div style="margin-top:12px;border-top:.5px solid #f0e8d8;padding-top:10px">';
+    asisEmp.forEach(function(r){
+      var badge=r.estado==='entrada'?'<span class="badge bd">Entrada</span>':r.estado==='salida'?'<span class="badge bc">Salida</span>':'<span class="badge br">Falta</span>';
+      html+='<div class="row">'+badge+'<span style="color:#aaa;font-size:12px">'+r.hora+'</span><button class="btnd" onclick="eliminarAsis(\''+r.id+'\')">x</button></div>';
     });
+    html+='</div>';
   }
-  html += '</div>';
-  document.getElementById('historial').innerHTML = html;
+  html+='</div>';
+
+  html+='<div class="card"><div class="sl">Resumen del mes</div>';
+  html+='<div class="field"><label>Mes</label><input type="month" value="'+mes+'" onchange="setMes(this.value)" style="max-width:180px"></div>';
+  html+='<div class="row"><div class="rn">Dias trabajados</div><div class="ra">'+diasTrabajados.length+'</div></div>';
+  html+='<div class="row"><div class="rn">Faltas</div><div style="font-size:14px;font-weight:600;color:#A32D2D">'+diasFalta.length+'</div></div>';
+  html+='</div>';
+
+  // Historial del mes
+  var histMes=asistencias.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
+  histMes.sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora)});
+  html+='<div class="card"><div class="sl">Historial del mes</div>';
+  if(histMes.length===0){html+='<div class="empty">Sin registros</div>';}
+  else{histMes.forEach(function(r){
+    var badge=r.estado==='entrada'?'<span class="badge bd">Entrada</span>':r.estado==='salida'?'<span class="badge bc">Salida</span>':'<span class="badge br">Falta</span>';
+    html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span><button class="btnd" onclick="eliminarAsis(\''+r.id+'\')">x</button></div>';
+  });}
+  html+='</div>';
+  return html;
 }
 
-function setFilter(t) { filterTurno=t; render(); }
-function setFilterDate(d) { filterDate=d; render(); }
+// SUB: ADELANTOS
+function renderSubAdelantos(emp,mes){
+  var adEmp=adelantos.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes&&!a.liquidado});
+  var adTotal=adEmp.reduce(function(a,x){return a+x.monto},0);
+  var adEfectivo=adEmp.filter(function(a){return a.tipo==='efectivo'}).reduce(function(a,x){return a+x.monto},0);
+  var adProducto=adEmp.filter(function(a){return a.tipo==='producto'}).reduce(function(a,x){return a+x.monto},0);
 
-function renderProductos() {
-  var html = '<div class="card"><div class="sl">Agregar producto</div><div class="g2">';
-  html += '<div class="field"><label>Nombre</label><input type="text" id="pp-nom" placeholder="Ej: Arroz con leche"></div>';
-  html += '<div class="field"><label>Precio (S/)</label><input type="number" id="pp-precio" placeholder="0.00" step="0.5"></div>';
-  html += '</div><div class="field"><label>Turno</label><select id="pp-turno"><option value="desayuno">Desayuno</option><option value="almuerzo" selected>Almuerzo</option><option value="cena">Cena</option><option value="otro">Otro</option></select></div>';
-  html += '<button class="btn" onclick="agregarProducto()">Agregar producto</button></div>';
+  var html='<div class="card"><div class="sl">Registrar adelanto</div>';
+  html+='<div class="field"><label>Mes</label><input type="month" value="'+mes+'" onchange="setMes(this.value)" style="max-width:180px"></div>';
+  html+='<div class="field"><label>Tipo de adelanto</label><select id="ad-tipo" onchange="toggleAdTipo()"><option value="efectivo">Efectivo</option><option value="producto">Producto del menu</option></select></div>';
+  html+='<div id="ad-efectivo-field" class="field"><label>Monto (S/)</label><input type="number" id="ad-monto" placeholder="0.00" step="0.5"></div>';
+  html+='<div id="ad-producto-field" style="display:none">';
+  html+='<div class="field"><label>Producto</label><select id="ad-prod">';
+  productos.forEach(function(p){html+='<option value="'+p.id+'" data-precio="'+p.precio+'" data-nombre="'+p.nombre+'">'+p.nombre+' - '+fmt(p.precio)+'</option>';});
+  html+='</select></div>';
+  html+='<div class="g2"><div class="field"><label>Cantidad</label><input type="number" id="ad-cant" value="1" min="1" oninput="calcAdTotal()"></div>';
+  html+='<div class="field"><label>Total</label><input type="text" id="ad-total" readonly class="total-field"></div></div>';
+  html+='</div>';
+  html+='<div class="field"><label>Fecha</label><input type="date" id="ad-fecha" value="'+today()+'" style="max-width:200px"></div>';
+  html+='<div class="field"><label>Nota (opcional)</label><input type="text" id="ad-nota" placeholder="Ej: para su familia..."></div>';
+  html+='<button class="btn btn-o" onclick="guardarAdelanto(\''+emp.id+'\',\''+emp.nombre+'\')">Registrar adelanto</button></div>';
 
-  html += '<div class="card"><div class="sl">Lista de productos ('+productos.length+')</div>';
-  if (productos.length===0) {
-    html += '<div class="empty">Sin productos</div>';
-  } else {
-    productos.forEach(function(p){
-      html += '<div class="prod-row"><div><div class="rn">'+p.nombre+'<span class="badge '+turnoClass(p.turno)+'">'+turnoLabel(p.turno)+'</span></div></div>';
-      html += '<div style="display:flex;align-items:center;gap:8px"><input class="inp-sm" type="number" value="'+p.precio+'" step="0.5" onchange="editarPrecio(\''+p.id+'\',this.value)">';
-      html += '<button class="btnd" onclick="eliminarProducto(\''+p.id+'\')">x</button></div></div>';
+  html+='<div class="card"><div class="sl">Adelantos del mes</div>';
+  html+='<div class="resumen-box">';
+  html+='<div class="resumen-row"><span>Adelantos en efectivo</span><span style="color:#185FA5">'+fmt(adEfectivo)+'</span></div>';
+  html+='<div class="resumen-row"><span>Adelantos en productos</span><span style="color:#993556">'+fmt(adProducto)+'</span></div>';
+  html+='<div class="resumen-row total"><span>Total adelantos</span><span style="color:#8b0000">'+fmt(adTotal)+'</span></div></div>';
+  if(adEmp.length===0){html+='<div class="empty">Sin adelantos este mes</div>';}
+  else{adEmp.forEach(function(a){
+    var tag=a.tipo==='efectivo'?'<span class="tag-ef">Efectivo</span>':'<span class="tag-pr">Producto</span>';
+    html+='<div class="row"><div>'+tag+'<div class="rn" style="margin-top:4px">'+(a.descripcion||'Adelanto')+'</div>';
+    html+='<div class="rm">'+fmtDate(a.fecha)+(a.nota?' · '+a.nota:'')+'</div></div>';
+    html+='<div style="display:flex;align-items:center;gap:6px"><div style="font-size:14px;font-weight:600;color:#854F0B">'+fmt(a.monto)+'</div>';
+    html+='<button class="btnd" onclick="eliminarAdelanto(\''+a.id+'\')">x</button></div></div>';
+  });}
+  html+='</div>';
+
+  // Historial meses anteriores
+  var adHistorial=adelantos.filter(function(a){return a.personalId===emp.id&&a.liquidado});
+  if(adHistorial.length>0){
+    html+='<div class="card"><div class="sl">Historial liquidados</div>';
+    adHistorial.slice(0,10).forEach(function(a){
+      var tag=a.tipo==='efectivo'?'<span class="tag-ef">Efectivo</span>':'<span class="tag-pr">Producto</span>';
+      html+='<div class="row"><div>'+tag+' <span class="tag-pa">Liquidado</span><div class="rm">'+fmtDate(a.fecha)+'</div></div>';
+      html+='<div style="font-size:13px;font-weight:600;color:#aaa">'+fmt(a.monto)+'</div></div>';
     });
+    html+='</div>';
   }
-  html += '</div>';
-  document.getElementById('productos').innerHTML = html;
+  return html;
 }
 
-function agregarProducto() {
-  var nom = document.getElementById('pp-nom').value.trim();
-  var precio = parseFloat(document.getElementById('pp-precio').value)||0;
-  var turno = document.getElementById('pp-turno').value;
-  if (!nom||precio<=0) { showToast('Completa nombre y precio', true); return; }
-  db.ref('productos').push({ nombre:nom, precio:precio, turno:turno })
-    .then(function(){ showToast('Producto agregado'); })
-    .catch(function(){ showToast('Error al guardar', true); });
+// SUB: PAGOS
+function renderSubPagos(emp,mes){
+  var paEmp=pagos.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
+  var paTotal=paEmp.reduce(function(a,x){return a+x.monto},0);
+
+  var html='<div class="card"><div class="sl">Registrar pago</div>';
+  html+='<div class="field"><label>Mes</label><input type="month" value="'+mes+'" onchange="setMes(this.value)" style="max-width:180px"></div>';
+  html+='<div class="g2"><div class="field"><label>Monto pagado (S/)</label><input type="number" id="pa-monto" placeholder="0.00" step="50></div>';
+  html+='<div class="field"><label>Fecha</label><input type="date" id="pa-fecha" value="'+today()+'"></div></div>';
+  html+='<div class="field"><label>Nota (opcional)</label><input type="text" id="pa-nota" placeholder="Ej: pago quincenal..."></div>';
+  html+='<button class="btn btn-g" onclick="guardarPago(\''+emp.id+'\',\''+emp.nombre+'\')">Registrar pago</button></div>';
+
+  html+='<div class="card"><div class="sl">Pagos del mes</div>';
+  html+='<div class="resumen-box"><div class="resumen-row total"><span>Total pagado</span><span style="color:#0F6E56">'+fmt(paTotal)+'</span></div></div>';
+  if(paEmp.length===0){html+='<div class="empty">Sin pagos este mes</div>';}
+  else{paEmp.forEach(function(p){
+    html+='<div class="row"><div><span class="tag-pa">Pago</span>';
+    html+='<div class="rm" style="margin-top:4px">'+fmtDate(p.fecha)+(p.nota?' · '+p.nota:'')+'</div></div>';
+    html+='<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(p.monto)+'</div>';
+    html+='<button class="btnd" onclick="eliminarPago(\''+p.id+'\')">x</button></div></div>';
+  });}
+  html+='</div>';
+
+  // Historial todos los meses
+  var paHistorial=pagos.filter(function(a){return a.personalId===emp.id});
+  var mesesPa={};paHistorial.forEach(function(p){var m=p.fecha.slice(0,7);mesesPa[m]=(mesesPa[m]||0)+p.monto;});
+  var mesesArr=Object.keys(mesesPa).sort().reverse();
+  if(mesesArr.length>1){
+    html+='<div class="card"><div class="sl">Historial de pagos</div>';
+    mesesArr.forEach(function(m){
+      html+='<div class="row"><div class="rn">'+m+'</div><div class="ra">'+fmt(mesesPa[m])+'</div></div>';
+    });
+    html+='</div>';
+  }
+  return html;
 }
 
-function eliminarProducto(id) {
-  if (!confirm('Eliminar este producto?')) return;
-  db.ref('productos/'+id).remove()
-    .then(function(){ showToast('Producto eliminado'); })
-    .catch(function(){ showToast('Error', true); });
+// SUB: LIQUIDACION
+function renderSubLiquidacion(emp,mes){
+  var adEmp=adelantos.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes&&!a.liquidado});
+  var paEmp=pagos.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
+  var asisMes=asistencias.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
+
+  var diasT=[];asisMes.forEach(function(a){if(a.estado==='entrada'&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
+  var diasF=[];asisMes.forEach(function(a){if(a.estado==='ausente'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
+
+  var totalAd=adEmp.reduce(function(a,x){return a+x.monto},0);
+  var totalPa=paEmp.reduce(function(a,x){return a+x.monto},0);
+  var sueldo=emp.sueldo||0;
+  var saldo=sueldo-totalAd-totalPa;
+
+  var html='<div class="card"><div class="sl">Liquidacion del mes</div>';
+  html+='<div class="field"><label>Mes</label><input type="month" value="'+mes+'" onchange="setMes(this.value)" style="max-width:180px"></div>';
+  html+='<div class="resumen-box">';
+  html+='<div class="resumen-row"><span>Sueldo base</span><span style="color:#0F6E56">'+fmt(sueldo)+'</span></div>';
+  html+='<div class="resumen-row"><span>Dias trabajados</span><span>'+diasT.length+' dias</span></div>';
+  html+='<div class="resumen-row"><span>Faltas</span><span style="color:#A32D2D">'+diasF.length+' dias</span></div>';
+  html+='<div class="resumen-row"><span>Adelantos en efectivo</span><span style="color:#185FA5">- '+fmt(adEmp.filter(function(a){return a.tipo==='efectivo'}).reduce(function(a,x){return a+x.monto},0))+'</span></div>';
+  html+='<div class="resumen-row"><span>Adelantos en productos</span><span style="color:#993556">- '+fmt(adEmp.filter(function(a){return a.tipo==='producto'}).reduce(function(a,x){return a+x.monto},0))+'</span></div>';
+  html+='<div class="resumen-row"><span>Ya pagado</span><span style="color:#0F6E56">- '+fmt(totalPa)+'</span></div>';
+  html+='<div class="resumen-row total"><span>SALDO A PAGAR</span><span style="color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</span></div>';
+  html+='</div>';
+
+  if(adEmp.length>0){
+    html+='<button class="btn btn-g" onclick="liquidarAdelantos(\''+emp.id+'\',\''+emp.nombre+'\',\''+mes+'\')">Marcar adelantos como liquidados</button>';
+  }
+
+  // Historial de liquidaciones pasadas
+  var adLiquidados=adelantos.filter(function(a){return a.personalId===emp.id&&a.liquidado});
+  var mesesLiq={};adLiquidados.forEach(function(a){var m=a.fecha.slice(0,7);mesesLiq[m]=(mesesLiq[m]||0)+a.monto;});
+  var mesesLiqArr=Object.keys(mesesLiq).sort().reverse();
+  if(mesesLiqArr.length>0){
+    html+='<div class="card" style="margin-top:0"><div class="sl">Meses liquidados</div>';
+    mesesLiqArr.forEach(function(m){
+      html+='<div class="row"><div class="rn">'+m+'</div>';
+      html+='<div><span class="tag-pa">Liquidado</span> <span style="font-size:13px;color:#aaa">'+fmt(mesesLiq[m])+'</span></div></div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  return html;
 }
 
-function editarPrecio(id, val) {
-  var precio = parseFloat(val);
-  if (!precio||precio<=0) return;
-  db.ref('productos/'+id).update({ precio:precio })
-    .then(function(){ showToast('Precio actualizado'); })
-    .catch(function(){});
+// ── ACCIONES PERSONAL ─────────────────────────────────────────
+function agregarPersonal(){
+  var nom=document.getElementById('per-nom').value.trim();
+  var cargo=document.getElementById('per-cargo').value;
+  var sueldo=parseFloat(document.getElementById('per-sueldo').value)||0;
+  if(!nom){showToast('Escribe el nombre',true);return;}
+  db.ref('personal').push({nombre:nom,cargo:cargo,sueldo:sueldo})
+    .then(function(){showToast('Empleado agregado');}).catch(function(){showToast('Error',true);});
+}
+function eliminarPersonal(id){
+  if(!confirm('Eliminar este empleado?'))return;
+  selectedEmpId=null;
+  db.ref('personal/'+id).remove().then(function(){showToast('Empleado eliminado');render();});
+}
+function marcarAsis(personalId,nombre,estado){
+  var fecha=document.getElementById('asis-fecha')?document.getElementById('asis-fecha').value:today();
+  db.ref('asistencias').push({personalId:personalId,nombre:nombre,estado:estado,fecha:fecha,hora:nowTime(),timestamp:new Date().toISOString()})
+    .then(function(){showToast(nombre+' - '+estado);});
+}
+function eliminarAsis(id){db.ref('asistencias/'+id).remove().then(function(){showToast('Registro eliminado');});}
+function setAsisDate(d){filterAsisDate=d;render();}
+function setMes(m){filterMes=m;render();}
+
+function toggleAdTipo(){
+  var tipo=document.getElementById('ad-tipo').value;
+  document.getElementById('ad-efectivo-field').style.display=tipo==='efectivo'?'block':'none';
+  document.getElementById('ad-producto-field').style.display=tipo==='producto'?'block':'none';
+  if(tipo==='producto')calcAdTotal();
+}
+function calcAdTotal(){
+  var sel=document.getElementById('ad-prod');if(!sel)return;
+  var opt=sel.options[sel.selectedIndex];
+  var cant=parseFloat(document.getElementById('ad-cant').value)||1;
+  var precio=parseFloat(opt.dataset.precio)||0;
+  var el=document.getElementById('ad-total');if(el)el.value=fmt(cant*precio);
+}
+function guardarAdelanto(personalId,nombre){
+  var tipo=document.getElementById('ad-tipo').value;
+  var fecha=document.getElementById('ad-fecha').value||today();
+  var nota=document.getElementById('ad-nota').value;
+  var monto=0,descripcion='';
+  if(tipo==='efectivo'){
+    monto=parseFloat(document.getElementById('ad-monto').value)||0;
+    descripcion='Adelanto efectivo';
+  } else {
+    var sel=document.getElementById('ad-prod');
+    var opt=sel.options[sel.selectedIndex];
+    var cant=parseFloat(document.getElementById('ad-cant').value)||1;
+    var precio=parseFloat(opt.dataset.precio)||0;
+    monto=cant*precio;
+    descripcion=cant+' x '+opt.dataset.nombre;
+  }
+  if(monto<=0){showToast('Monto invalido',true);return;}
+  db.ref('adelantos').push({personalId:personalId,nombre:nombre,tipo:tipo,monto:monto,descripcion:descripcion,fecha:fecha,hora:nowTime(),nota:nota,liquidado:false,timestamp:new Date().toISOString()})
+    .then(function(){showToast('Adelanto registrado - '+fmt(monto));});
+}
+function eliminarAdelanto(id){
+  if(!confirm('Eliminar este adelanto?'))return;
+  db.ref('adelantos/'+id).remove().then(function(){showToast('Adelanto eliminado');});
+}
+function guardarPago(personalId,nombre){
+  var monto=parseFloat(document.getElementById('pa-monto').value)||0;
+  var fecha=document.getElementById('pa-fecha').value||today();
+  var nota=document.getElementById('pa-nota').value;
+  if(monto<=0){showToast('Monto invalido',true);return;}
+  db.ref('pagos').push({personalId:personalId,nombre:nombre,monto:monto,fecha:fecha,nota:nota,hora:nowTime(),timestamp:new Date().toISOString()})
+    .then(function(){showToast('Pago registrado - '+fmt(monto));});
+}
+function eliminarPago(id){
+  if(!confirm('Eliminar este pago?'))return;
+  db.ref('pagos/'+id).remove().then(function(){showToast('Pago eliminado');});
+}
+function liquidarAdelantos(personalId,nombre,mes){
+  if(!confirm('Marcar todos los adelantos de '+mes+' como liquidados?'))return;
+  var adEmp=adelantos.filter(function(a){return a.personalId===personalId&&a.fecha.slice(0,7)===mes&&!a.liquidado});
+  var promesas=adEmp.map(function(a){return db.ref('adelantos/'+a.id).update({liquidado:true});});
+  Promise.all(promesas).then(function(){showToast('Adelantos liquidados');});
+}
+
+// ── PRODUCTOS ─────────────────────────────────────────────────
+function renderProductos(){
+  var html='<div class="card"><div class="sl">Agregar producto</div>';
+  html+='<div class="g2"><div class="field"><label>Nombre</label><input type="text" id="pp-nom" placeholder="Ej: Arroz con leche"></div>';
+  html+='<div class="field"><label>Precio (S/)</label><input type="number" id="pp-precio" placeholder="0.00" step="0.5"></div></div>';
+  html+='<div class="field"><label>Turno</label><select id="pp-turno"><option value="desayuno">Desayuno</option><option value="almuerzo" selected>Almuerzo</option><option value="cena">Cena</option><option value="otro">Otro</option></select></div>';
+  html+='<button class="btn" onclick="agregarProducto()">Agregar producto</button></div>';
+  html+='<div class="card"><div class="sl">Lista de productos ('+productos.length+')</div>';
+  if(productos.length===0){html+='<div class="empty">Sin productos</div>';}
+  else{productos.forEach(function(p){
+    html+='<div class="prod-row"><div><div class="rn">'+p.nombre+'<span class="badge '+turnoClass(p.turno)+'">'+turnoLabel(p.turno)+'</span></div></div>';
+    html+='<div style="display:flex;align-items:center;gap:8px"><input class="inp-sm" type="number" value="'+p.precio+'" step="0.5" onchange="editarPrecio(\''+p.id+'\',this.value)">';
+    html+='<button class="btnd" onclick="eliminarProducto(\''+p.id+'\')">x</button></div></div>';
+  });}
+  html+='</div>';
+  document.getElementById('productos').innerHTML=html;
+}
+function agregarProducto(){
+  var nom=document.getElementById('pp-nom').value.trim();
+  var precio=parseFloat(document.getElementById('pp-precio').value)||0;
+  var turno=document.getElementById('pp-turno').value;
+  if(!nom||precio<=0){showToast('Completa nombre y precio',true);return;}
+  db.ref('productos').push({nombre:nom,precio:precio,turno:turno}).then(function(){showToast('Producto agregado');});
+}
+function eliminarProducto(id){
+  if(!confirm('Eliminar este producto?'))return;
+  db.ref('productos/'+id).remove().then(function(){showToast('Producto eliminado');});
+}
+function editarPrecio(id,val){
+  var precio=parseFloat(val);if(!precio||precio<=0)return;
+  db.ref('productos/'+id).update({precio:precio}).then(function(){showToast('Precio actualizado');});
 }
 </script>
 </body>
