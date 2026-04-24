@@ -98,7 +98,7 @@ body{font-family:'Source Sans 3',sans-serif;background:#fdf8f0;color:#1a1a1a;min
 .resumen-row.total{font-weight:600;font-size:15px;border-top:1px solid #e0d5c5;margin-top:6px;padding-top:10px}
 .asis-btns{display:flex;gap:6px;margin-top:8px}
 .asis-btn{flex:1;border:none;border-radius:8px;padding:8px;font-size:12px;font-family:'Source Sans 3',sans-serif;font-weight:600;cursor:pointer}
-.ab-in{background:#EAF3DE;color:#3B6D11}.ab-out{background:#FAEEDA;color:#854F0B}.ab-abs{background:#FCEBEB;color:#A32D2D}
+.ab-in{background:#EAF3DE;color:#3B6D11}.ab-out{background:#FCEBEB;color:#A32D2D}.ab-abs{background:#E6F1FB;color:#185FA5}
 .tag-ef{background:#E6F1FB;color:#185FA5;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
 .tag-pr{background:#FBEAF0;color:#993556;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
 .tag-pa{background:#EAF3DE;color:#3B6D11;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
@@ -323,8 +323,8 @@ function renderEmpView(empId){
   var adEmp=adelantos.filter(function(a){return a.personalId===empId&&a.fecha.slice(0,7)===mes&&!a.liquidado});
   var paEmp=pagos.filter(function(a){return a.personalId===empId&&a.fecha.slice(0,7)===mes});
   var asisMes=asistencias.filter(function(a){return a.personalId===empId&&a.fecha.slice(0,7)===mes});
-  var diasT=[];asisMes.forEach(function(a){if(a.estado==='entrada'&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
-  var diasF=[];asisMes.forEach(function(a){if(a.estado==='ausente'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
+  var diasT=[];asisMes.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
+  var diasF=[];asisMes.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
   var totalAd=adEmp.reduce(function(a,x){return a+x.monto},0);
   var totalPa=paEmp.reduce(function(a,x){return a+x.monto},0);
   var saldo=(emp.sueldo||0)-totalAd-totalPa;
@@ -359,7 +359,7 @@ function renderEmpView(empId){
   else{
     var histSorted=asisMes.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora)});
     histSorted.forEach(function(r){
-      var badge=r.estado==='entrada'?'<span class="badge bd">Entrada</span>':r.estado==='salida'?'<span class="badge bc">Salida</span>':'<span class="badge br">Falta</span>';
+      var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo</span>';
       html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span></div>';
     });
   }
@@ -476,7 +476,7 @@ function renderDashboard(){
   var byT=function(t){return hoy.filter(function(v){return v.turno===t}).reduce(function(a,v){return a+v.total},0)};
   var d=byT('desayuno'),al=byT('almuerzo'),c=byT('cena');var maxBar=Math.max(d,al,c,1);
   var asisHoy=asistencias.filter(function(a){return a.fecha===today()});
-  var presIds=[];asisHoy.forEach(function(a){if((a.estado==='entrada'||a.estado==='salida')&&presIds.indexOf(a.personalId)<0)presIds.push(a.personalId)});
+  var presIds=[];asisHoy.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&presIds.indexOf(a.personalId)<0)presIds.push(a.personalId)});
   var html='<div class="metrics">';
   html+='<div class="met"><div class="ml">Total hoy</div><div class="mv g">'+fmt(total)+'</div></div>';
   html+='<div class="met"><div class="ml">Ventas</div><div class="mv">'+hoy.length+'</div></div>';
@@ -495,7 +495,7 @@ function renderDashboard(){
     var regs=asisHoy.filter(function(a){return a.personalId===p.id});
     var ult=regs.length?regs[regs.length-1]:null;
     var dc='dot-none',et='Sin registrar';
-    if(ult){if(ult.estado==='entrada'){dc='dot-in';et='Entrada '+ult.hora;}else if(ult.estado==='salida'){dc='dot-out';et='Salio '+ult.hora;}else{dc='dot-abs';et='Ausente';}}
+    if(ult){if(ult.estado==='asistio'){dc='dot-in';et='Asistio';}else if(ult.estado==='medio tiempo'){dc='dot-out';et='Medio tiempo';}else{dc='dot-abs';et='No asistio';}}
     html+='<div class="row"><div class="rn">'+p.nombre+'<span class="badge bp">'+p.cargo+'</span></div>';
     html+='<div style="display:flex;align-items:center;font-size:12px;color:#888"><span class="dot '+dc+'"></span>'+et+'</div></div>';
   });}
@@ -649,10 +649,10 @@ function renderSubAsistencia(emp,mes){
   var asisEmp=asistencias.filter(function(a){return a.personalId===emp.id&&a.fecha===fechaFiltro});
   var ult=asisEmp.length?asisEmp[asisEmp.length-1]:null;
   var dc='dot-none',et='Sin registrar';
-  if(ult){if(ult.estado==='entrada'){dc='dot-in';et='Entrada: '+ult.hora;}else if(ult.estado==='salida'){dc='dot-out';et='Salio: '+ult.hora;}else{dc='dot-abs';et='Ausente';}}
+  if(ult){if(ult.estado==='asistio'){dc='dot-in';et='Asistio';}else if(ult.estado==='medio tiempo'){dc='dot-out';et='Medio tiempo';}else{dc='dot-abs';et='No asistio';}}
   var asisMes=asistencias.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
-  var diasT=[];asisMes.forEach(function(a){if(a.estado==='entrada'&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
-  var diasF=[];asisMes.forEach(function(a){if(a.estado==='ausente'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
+  var diasT=[];asisMes.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
+  var diasF=[];asisMes.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
   var html='<div class="card"><div class="sl">Marcar asistencia</div>';
   html+='<div class="field"><label>Fecha</label><input type="date" id="asis-fecha" value="'+fechaFiltro+'" onchange="setAsisDate(this.value)" style="max-width:200px"></div>';
   html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="dot '+dc+'"></span><span style="font-size:13px;color:#888">'+et+'</span></div>';
@@ -663,7 +663,7 @@ function renderSubAsistencia(emp,mes){
   if(asisEmp.length>0){
     html+='<div style="margin-top:12px;border-top:.5px solid #f0e8d8;padding-top:10px">';
     asisEmp.forEach(function(r){
-      var badge=r.estado==='entrada'?'<span class="badge bd">Entrada</span>':r.estado==='salida'?'<span class="badge bc">Salida</span>':'<span class="badge br">Falta</span>';
+      var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo</span>';
       html+='<div class="row">'+badge+'<span style="color:#aaa;font-size:12px">'+r.hora+'</span><button class="btnd" onclick="eliminarAsis(\''+r.id+'\')">x</button></div>';
     });
     html+='</div>';
@@ -677,7 +677,7 @@ function renderSubAsistencia(emp,mes){
   html+='<div class="card"><div class="sl">Historial del mes</div>';
   if(histMes.length===0){html+='<div class="empty">Sin registros</div>';}
   else{histMes.forEach(function(r){
-    var badge=r.estado==='entrada'?'<span class="badge bd">Entrada</span>':r.estado==='salida'?'<span class="badge bc">Salida</span>':'<span class="badge br">Falta</span>';
+    var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo</span>';
     html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span><button class="btnd" onclick="eliminarAsis(\''+r.id+'\')">x</button></div>';
   });}
   html+='</div>';
@@ -741,8 +741,8 @@ function renderSubLiquidacion(emp,mes){
   var adEmp=adelantos.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes&&!a.liquidado});
   var paEmp=pagos.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
   var asisMes=asistencias.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
-  var diasT=[];asisMes.forEach(function(a){if(a.estado==='entrada'&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
-  var diasF=[];asisMes.forEach(function(a){if(a.estado==='ausente'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
+  var diasT=[];asisMes.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
+  var diasF=[];asisMes.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
   var totalAd=adEmp.reduce(function(a,x){return a+x.monto},0);
   var totalPa=paEmp.reduce(function(a,x){return a+x.monto},0);
   var sueldo=emp.sueldo||0;
