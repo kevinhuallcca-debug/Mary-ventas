@@ -657,9 +657,9 @@ function renderSubAsistencia(emp,mes){
   html+='<div class="field"><label>Fecha</label><input type="date" id="asis-fecha" value="'+fechaFiltro+'" onchange="setAsisDate(this.value)" style="max-width:200px"></div>';
   html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="dot '+dc+'"></span><span style="font-size:13px;color:#888">'+et+'</span></div>';
   html+='<div class="asis-btns">';
-  html+='<button class="asis-btn ab-in" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'entrada\')">Entrada</button>';
-  html+='<button class="asis-btn ab-out" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'salida\')">Salida</button>';
-  html+='<button class="asis-btn ab-abs" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'ausente\')">Falta</button></div>';
+  html+='<button class="asis-btn ab-in" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'asistio\')">Asistio</button>';
+  html+='<button class="asis-btn ab-out" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'no asistio\')">No asistio</button>';
+  html+='<button class="asis-btn ab-abs" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'medio tiempo\')">Medio tiempo</button></div>';
   if(asisEmp.length>0){
     html+='<div style="margin-top:12px;border-top:.5px solid #f0e8d8;padding-top:10px">';
     asisEmp.forEach(function(r){
