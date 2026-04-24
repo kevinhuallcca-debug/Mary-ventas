@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#8b0000">
+<title>Mary — Registro de Ventas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getDatabase, ref, push, remove, update, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCQIboNV2qf6Wcc1DIaI7WN4T6rUh1UyJg",
+  authDomain: "mary-restaurante.firebaseapp.com",
+  databaseURL: "https://mary-restaurante-default-rtdb.firebaseio.com",
+  projectId: "mary-restaurante",
+  storageBucket: "mary-restaurante.firebasestorage.app",
+  messagingSenderId: "499224458217",
+  appId: "1:499224458217:web:80c08c756631359e575178"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let ventas = [];
+let productos = [];
+let activeTab = 'dashboard';
+let filterTurno = 'todos';
+let filterDate = '';
+
+const defaultProductos = [
+  { nombre: 'Pollo a la brasa', precio: 18, turno: 'almuerzo' },
+  { nombre: 'Desayuno completo', precio: 8, turno: 'desayuno' },
+  { nombre: 'Menu almuerzo', precio: 10, turno: 'almuerzo' },
+  { nombre: 'Menu cena', precio: 10, turno: 'cena' },
+  { nombre: 'Porcion de pollo', precio: 12, turno: 'almuerzo' },
+];
+
+function today() { return new Date().toISOString().split('T')[0]; }
+function fmtDate(d) { const p = d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function fmt(n) { return 'S/ '+parseFloat(n).toFixed(2); }
+function turnoClass(t) { return t==='desayuno'?'bd':t==='almuerzo'?'ba':t==='cena'?'bc':'bo'; }
+function turnoLabel(t) { return t.charAt(0).toUpperCase()+t.slice(1); }
+
+function toast(msg, error=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = error ? '#7a1f1f' : '#1f4a1f';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+onValue(ref(db, 'productos'), (snap) => {
+  productos = [];
+  snap.forEach(child => productos.push({ id: child.key, ...child.val() }));
+  productos.sort((a,b) => a.nombre.localeCompare(b.nombre));
+  if (productos.length === 0) {
+    defaultProductos.forEach(p => push(ref(db, 'productos'), p));
+  }
+  render();
+});
+
+onValue(ref(db, 'ventas'), (snap) => {
+  ventas = [];
+  snap.forEach(child => ventas.push({ id: child.key, ...child.val() }));
+  ventas.sort((a,b) => (b.timestamp||'').localeCompare(a.timestamp||''));
+  render();
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+});
+
+window.tab = function(name) {
+  activeTab = name;
+  document.querySelectorAll('.nb').forEach((b,i) => {
+    b.classList.toggle('on', ['dashboard','nueva','historial','productos'][i] === name);
+  });
+  ['dashboard','nueva','historial','productos'].forEach(t => {
+    document.getElementById(t).style.display = t===name ? 'block' : 'none';
+  });
+  render();
+}
+
+function render() {
+  if (activeTab==='dashboard') renderDashboard();
+  else if (activeTab==='nueva') renderNueva();
+  else if (activeTab==='historial') renderHistorial();
+  else if (activeTab==='productos') renderProductos();
+}
+
+function renderDashboard() {
+  const hoy = ventas.filter(v => v.fecha === today());
+  const total = hoy.reduce((a,v) => a+v.total, 0);
+  const byTurno = t => hoy.filter(v => v.turno===t).reduce((a,v) => a+v.total, 0);
+  const d=byTurno('desayuno'), al=byTurno('almuerzo'), c=byTurno('cena');
+  const maxBar = Math.max(d,al,c,1);
+  const topProds = {};
+  hoy.forEach(v => { topProds[v.producto] = (topProds[v.producto]||0)+v.cantidad; });
+  const top = Object.entries(topProds).sort((a,b)=>b[1]-a[1]).slice(0,4);
+
+  document.getElementById('dashboard').innerHTML = `
+    <div class="metrics">
+      <div class="met"><div class="ml">Total hoy</div><div class="mv g">${fmt(total)}</div></div>
+      <div class="met"><div class="ml">Ventas</div><div class="mv">${hoy.length}</div></div>
+      <div class="met"><div class="ml">Promedio</div><div class="mv">${hoy.length?fmt(total/hoy.length):'S/ 0'}</div></div>
+      <div class="met"><div class="ml">Fecha</div><div class="mv sm">${fmtDate(today())}</div></div>
+    </div>
+    <div class="card">
+      <div class="sl">Ventas por turno hoy</div>
+      ${['desayuno','almuerzo','cena'].map((t,i) => {
+        const val=[d,al,c][i];
+        return '<div class="bar-row"><div class="bar-label"><span>'+turnoLabel(t)+'</span><span>'+fmt(val)+'</span></div><div class="bar-bg"><div class="bar-fill" style="width:'+((val/maxBar*100).toFixed(0))+'%"></div></div></div>';
+      }).join('')}
+    </div>
+    ${top.length ? '<div class="card"><div class="sl">Mas vendido hoy</div>'+top.map(([nombre,cant]) => '<div class="row"><div class="rn">'+nombre+'</div><div class="ra">'+cant+' unid.</div></div>').join('')+'</div>' : ''}
+    <div class="card">
+      <div class="sl">Ultimas ventas</div>
+      ${hoy.length===0 ? '<div class="empty">Sin ventas registradas hoy</div>' :
+        hoy.slice(0,8).map(v => '<div class="row"><div><div class="rn">'+v.producto+'<span class="badge '+turnoClass(v.turno)+'">'+turnoLabel(v.turno)+'</span></div><div class="rm">'+v.cantidad+' x '+fmt(v.precioUnit)+' - '+v.hora+(v.obs?' - '+v.obs:'')+'</div></div><div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div><button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>').join('')}
+    </div>`;
+}
+
+function renderNueva() {
+  const opts = productos.map(p => '<option value="'+p.id+'" data-precio="'+p.precio+'" data-turno="'+p.turno+'">'+p.nombre+' - '+fmt(p.precio)+'</option>').join('');
+  document.getElementById('nueva').innerHTML = `
+    <div class="card">
+      <div class="sl">Registrar venta</div>
+      <div class="field"><label>Producto</label><select id="np-prod" onchange="actualizarPrecio()">${opts}</select></div>
+      <div class="g3">
+        <div class="field"><label>Cantidad</label><input type="number" id="np-cant" value="1" min="1" oninput="calcTotal()"></div>
+        <div class="field"><label>Precio unit. (S/)</label><input type="number" id="np-precio" step="0.5" oninput="calcTotal()"></div>
+        <div class="field"><label>Total</label><input type="text" id="np-total" readonly class="total-field"></div>
+      </div>
+      <div class="g2">
+        <div class="field"><label>Turno</label><select id="np-turno"><option value="desayuno">Desayuno</option><option value="almuerzo" selected>Almuerzo</option><option value="cena">Cena</option><option value="otro">Otro</option></select></div>
+        <div class="field"><label>Fecha</label><input type="date" id="np-fecha" value="${today()}"></div>
+      </div>
+      <div class="field"><label>Observacion (opcional)</label><input type="text" id="np-obs" placeholder="Ej: para llevar, sin aji..."></div>
+      <button class="btn" onclick="guardarVenta()">Registrar venta</button>
+    </div>`;
+  actualizarPrecio();
+}
+
+window.actualizarPrecio = function() {
+  const sel = document.getElementById('np-prod');
+  if (!sel) return;
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('np-precio').value = opt.dataset.precio;
+  const turno = opt.dataset.turno;
+  if (['desayuno','almuerzo','cena'].includes(turno)) document.getElementById('np-turno').value = turno;
+  calcTotal();
+}
+
+window.calcTotal = function() {
+  const cant = parseFloat(document.getElementById('np-cant')?.value)||0;
+  const precio = parseFloat(document.getElementById('np-precio')?.value)||0;
+  const el = document.getElementById('np-total');
+  if (el) el.value = fmt(cant*precio);
+}
+
+window.guardarVenta = async function() {
+  const sel = document.getElementById('np-prod');
+  const prod = productos.find(p => p.id===sel.value);
+  const cant = parseFloat(document.getElementById('np-cant').value)||1;
+  const precio = parseFloat(document.getElementById('np-precio').value)||0;
+  const turno = document.getElementById('np-turno').value;
+  const fecha = document.getElementById('np-fecha').value||today();
+  const obs = document.getElementById('np-obs').value;
+  if (!prod||cant<=0||precio<=0) { toast('Completa todos los campos', true); return; }
+  const now = new Date();
+  const hora = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  try {
+    await push(ref(db,'ventas'), { producto: prod.nombre, prodId: prod.id, cantidad: cant, precioUnit: precio, total: cant*precio, turno, fecha, hora, obs, timestamp: now.toISOString() });
+    toast('Venta registrada - '+fmt(cant*precio));
+    tab('dashboard');
+  } catch(e) { toast('Error al guardar', true); }
+}
+
+window.eliminarVenta = async function(id) {
+  if (!confirm('Eliminar esta venta?')) return;
+  try { await remove(ref(db,'ventas/'+id)); toast('Venta eliminada'); }
+  catch(e) { toast('Error al eliminar', true); }
+}
+
+function renderHistorial() {
+  let filtradas = ventas.filter(v => {
+    if (filterTurno!=='todos' && v.turno!==filterTurno) return false;
+    if (filterDate && v.fecha!==filterDate) return false;
+    return true;
+  });
+  const totalFiltrado = filtradas.reduce((a,v) => a+v.total, 0);
+  document.getElementById('historial').innerHTML = `
+    <div class="card">
+      <div class="sl">Filtros</div>
+      <div class="frow">${['todos','desayuno','almuerzo','cena'].map(t => '<button class="fb '+(filterTurno===t?'on':'')+'" onclick="setFilter(\''+t+'\')">'+(t==='todos'?'Todos':turnoLabel(t))+'</button>').join('')}</div>
+      <div class="field" style="margin-top:10px"><label>Por fecha</label><input type="date" value="${filterDate}" onchange="setFilterDate(this.value)" style="max-width:200px"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div class="sl" style="margin:0">${filtradas.length} ventas</div>
+        <div style="font-size:15px;font-weight:600;color:#0F6E56">${fmt(totalFiltrado)}</div>
+      </div>
+      ${filtradas.length===0 ? '<div class="empty">Sin ventas en este periodo</div>' :
+        filtradas.map(v => '<div class="row"><div><div class="rn">'+v.producto+'<span class="badge '+turnoClass(v.turno)+'">'+turnoLabel(v.turno)+'</span></div><div class="rm">'+fmtDate(v.fecha)+' '+v.hora+' - '+v.cantidad+' x '+fmt(v.precioUnit)+(v.obs?' - '+v.obs:'')+'</div></div><div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div><button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>').join('')}
+    </div>`;
+}
+
+window.setFilter = function(t) { filterTurno=t; render(); }
+window.setFilterDate = function(d) { filterDate=d; render(); }
+
+function renderProductos() {
+  document.getElementById('productos').innerHTML = `
+    <div class="card">
+      <div class="sl">Agregar producto</div>
+      <div class="g2">
+        <div class="field"><label>Nombre</label><input type="text" id="pp-nom" placeholder="Ej: Arroz con leche"></div>
+        <div class="field"><label>Precio (S/)</label><input type="number" id="pp-precio" placeholder="0.00" step="0.5"></div>
+      </div>
+      <div class="field"><label>Turno</label><select id="pp-turno"><option value="desayuno">Desayuno</option><option value="almuerzo" selected>Almuerzo</option><option value="cena">Cena</option><option value="otro">Otro</option></select></div>
+      <button class="btn" onclick="agregarProducto()">Agregar producto</button>
+    </div>
+    <div class="card">
+      <div class="sl">Lista de productos (${productos.length})</div>
+      ${productos.length===0 ? '<div class="empty">Sin productos</div>' :
+        productos.map(p => '<div class="prod-row"><div><div class="rn">'+p.nombre+'<span class="badge '+turnoClass(p.turno)+'">'+turnoLabel(p.turno)+'</span></div></div><div style="display:flex;align-items:center;gap:8px"><input class="inp-sm" type="number" value="'+p.precio+'" step="0.5" onchange="editarPrecio(\''+p.id+'\',this.value)"><button class="btnd" onclick="eliminarProducto(\''+p.id+'\')">x</button></div></div>').join('')}
+    </div>`;
+}
+
+window.agregarProducto = async function() {
+  const nom = document.getElementById('pp-nom').value.trim();
+  const precio = parseFloat(document.getElementById('pp-precio').value)||0;
+  const turno = document.getElementById('pp-turno').value;
+  if (!nom||precio<=0) { toast('Completa nombre y precio', true); return; }
+  try { await push(ref(db,'productos'), { nombre:nom, precio, turno }); toast('Producto agregado'); }
+  catch(e) { toast('Error al guardar', true); }
+}
+
+window.eliminarProducto = async function(id) {
+  if (!confirm('Eliminar este producto?')) return;
+  try { await remove(ref(db,'productos/'+id)); toast('Producto eliminado'); }
+  catch(e) { toast('Error', true); }
+}
+
+window.editarPrecio = async function(id, val) {
+  const precio = parseFloat(val);
+  if (!precio||precio<=0) return;
+  try { await update(ref(db,'productos/'+id), { precio }); toast('Precio actualizado'); }
+  catch(e) {}
+}
+<\/script>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Source Sans 3', sans-serif; background: #fdf8f0; color: #1a1a1a; min-height: 100vh; }
+#loader { position: fixed; inset: 0; background: #fdf8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; gap: 14px; }
+.loader-logo { font-family: 'Playfair Display', serif; font-size: 38px; color: #8b0000; letter-spacing: 5px; }
+.loader-sub { font-size: 11px; letter-spacing: 4px; color: #bbb; text-transform: uppercase; }
+.loader-dot { display: flex; gap: 7px; margin-top: 4px; }
+.loader-dot span { width: 7px; height: 7px; border-radius: 50%; background: #c8a96e; animation: bounce 1s infinite; }
+.loader-dot span:nth-child(2) { animation-delay: 0.15s; }
+.loader-dot span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-9px)} }
+#app { display: none; max-width: 600px; margin: 0 auto; padding: 0 0 50px; }
+.header { text-align: center; padding: 24px 0 8px; }
+.logo { font-family: 'Playfair Display', serif; font-size: 34px; color: #8b0000; letter-spacing: 5px; }
+.sub { font-size: 10px; letter-spacing: 4px; color: #aaa; text-transform: uppercase; margin-top: 3px; }
+.divider { width: 50px; height: 1.5px; background: #c8a96e; margin: 10px auto; }
+.nav { display: flex; border-bottom: 1px solid #ede4d4; margin: 0 1rem; overflow-x: auto; }
+.nb { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 16px; font-size: 13px; cursor: pointer; color: #aaa; margin-bottom: -1px; font-family: 'Source Sans 3', sans-serif; white-space: nowrap; transition: all 0.15s; }
+.nb.on { color: #8b0000; border-bottom-color: #8b0000; font-weight: 600; }
+.card { background: #fff; border: 1px solid #ede4d4; border-radius: 12px; padding: 18px; margin: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.sl { font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: #8b0000; margin-bottom: 14px; font-weight: 600; }
+.metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 1rem; }
+.met { background: #fff; border: 1px solid #ede4d4; border-radius: 10px; padding: 12px 8px; text-align: center; }
+.ml { font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+.mv { font-size: 18px; font-weight: 600; color: #1a1a1a; margin-top: 3px; }
+.mv.g { color: #0F6E56; }
+.mv.sm { font-size: 13px; margin-top: 5px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 11px; color: #aaa; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.field input, .field select { width: 100%; border: 1px solid #e0d5c5; border-radius: 8px; padding: 9px 12px; font-size: 14px; font-family: 'Source Sans 3', sans-serif; color: #1a1a1a; background: #fff; transition: border-color 0.2s; }
+.field input:focus, .field select:focus { outline: none; border-color: #8b0000; }
+.total-field { color: #0F6E56 !important; font-weight: 600 !important; background: #f0faf5 !important; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.btn { background: #8b0000; color: #fff; border: none; border-radius: 8px; padding: 12px; font-size: 14px; cursor: pointer; width: 100%; font-family: 'Source Sans 3', sans-serif; font-weight: 600; transition: background 0.15s; margin-top: 4px; }
+.btn:hover { background: #6b0000; }
+.btnd { background: none; border: none; color: #cc3333; font-size: 13px; cursor: pointer; padding: 4px 7px; border-radius: 4px; }
+.fb { background: none; border: 1px solid #e0d5c5; border-radius: 20px; padding: 5px 13px; font-size: 11px; cursor: pointer; color: #888; font-family: 'Source Sans 3', sans-serif; transition: all 0.15s; }
+.fb.on { background: #8b0000; color: #fff; border-color: #8b0000; }
+.row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid #f0e8d8; }
+.row:last-child { border-bottom: none; }
+.rn { font-size: 14px; font-weight: 500; color: #1a1a1a; }
+.rm { font-size: 12px; color: #bbb; margin-top: 2px; }
+.ra { font-size: 15px; font-weight: 600; color: #0F6E56; }
+.badge { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; margin-left: 6px; vertical-align: middle; }
+.bd { background: #EAF3DE; color: #3B6D11; }
+.ba { background: #E6F1FB; color: #185FA5; }
+.bc { background: #FAEEDA; color: #854F0B; }
+.bo { background: #F1EFE8; color: #5F5E5A; }
+.empty { text-align: center; padding: 2rem; color: #ccc; font-size: 14px; }
+.bar-row { margin-bottom: 12px; }
+.bar-label { font-size: 12px; color: #aaa; margin-bottom: 4px; display: flex; justify-content: space-between; }
+.bar-bg { height: 16px; background: #f5ede0; border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: #8b0000; border-radius: 4px; transition: width 0.5s; }
+.prod-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 0.5px solid #f0e8d8; }
+.prod-row:last-child { border-bottom: none; }
+.inp-sm { width: 90px; border: 1px solid #e0d5c5; border-radius: 6px; padding: 6px 8px; font-size: 13px; font-family: 'Source Sans 3', sans-serif; color: #1a1a1a; text-align: center; }
+.frow { display: flex; gap: 6px; flex-wrap: wrap; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1f4a1f; color: #fff; padding: 10px 22px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; }
+.toast.show { opacity: 1; }
+@media (max-width: 420px) { .metrics { grid-template-columns: repeat(2,1fr); } .g3 { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div id="loader">
+  <div class="loader-logo">Mary</div>
+  <div class="loader-sub">Conectando...</div>
+  <div class="loader-dot"><span></span><span></span><span></span></div>
+</div>
+<div id="app">
+  <div class="header">
+    <div class="logo">Mary</div>
+    <div class="sub">Registro de Ventas</div>
+    <div class="divider"></div>
+  </div>
+  <nav class="nav">
+    <button class="nb on" onclick="tab('dashboard')">Resumen</button>
+    <button class="nb" onclick="tab('nueva')">+ Nueva venta</button>
+    <button class="nb" onclick="tab('historial')">Historial</button>
+    <button class="nb" onclick="tab('productos')">Productos</button>
+  </nav>
+  <div id="dashboard"></div>
+  <div id="nueva" style="display:none"></div>
+  <div id="historial" style="display:none"></div>
+  <div id="productos" style="display:none"></div>
+</div>
+<div class="toast" id="toast"></div>
+</body>
+</html>
