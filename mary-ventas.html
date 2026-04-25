@@ -329,7 +329,7 @@ function showCajeroApp(){
   document.getElementById('app').style.display='block';
   document.getElementById('user-badge').textContent='Cajero: '+(currentUser.nombre||'');
   var nav=document.querySelector('.nav');
-  nav.innerHTML='<button class="nb on" onclick="showTab(\'dashboard\')>Resumen</button><button class="nb" onclick="showTab(\'nueva\')">+ Venta</button><button class="nb" onclick="showTab(\'historial\')">Historial</button><button class="nb" onclick="showTab(\'productos\')">Productos</button><button class="nb" onclick="showTab(\'gastos\')">Gastos</button>';
+  nav.innerHTML='<button class="nb on" onclick="showTab(\'dashboard\')">Resumen</button><button class="nb" onclick="showTab(\'nueva\')">+ Venta</button><button class="nb" onclick="showTab(\'historial\')">Historial</button><button class="nb" onclick="showTab(\'productos\')">Productos</button><button class="nb" onclick="showTab(\'gastos\')">Gastos</button>';
   showTab('dashboard');
 }
 
@@ -348,12 +348,13 @@ function showAdminApp(){
   document.getElementById('app').style.display='block';
   document.getElementById('user-badge').textContent='Admin';
   var nav=document.querySelector('.nav');
-  nav.innerHTML=['<button class="nb on" onclick="showTab(\'dashboard\')">Resumen</button>',
-    '<button class="nb" onclick="showTab(\'nueva\')">+ Venta</button>',
-    '<button class="nb" onclick="showTab(\'historial\')">Historial</button>',
-    '<button class="nb" onclick="showTab(\'personal\')">Personal</button>',
-    '<button class="nb" onclick="showTab(\'productos\')">Productos</button>',
-    '<button class="nb" onclick="showTab(\'gastos\')">Gastos</button>'].join('');
+  nav.innerHTML=[
+    '<button class="nb" data-tab="dashboard" onclick="showTab(\'dashboard\')">Resumen</button>',
+    '<button class="nb" data-tab="nueva" onclick="showTab(\'nueva\')">+ Venta</button>',
+    '<button class="nb" data-tab="historial" onclick="showTab(\'historial\')">Historial</button>',
+    '<button class="nb" data-tab="personal" onclick="showTab(\'personal\')">Personal</button>',
+    '<button class="nb" data-tab="productos" onclick="showTab(\'productos\')">Productos</button>',
+    '<button class="nb" data-tab="gastos" onclick="showTab(\'gastos\')">Gastos</button>'].join('');
   render();
 }
 
@@ -512,7 +513,9 @@ setTimeout(function(){
 function showTab(name){
   activeTab=name;selectedEmpId=null;
   document.querySelectorAll('.nb').forEach(function(b){
-    b.classList.toggle('on',b.getAttribute('onclick')&&b.getAttribute('onclick').indexOf("'"+name+"'")>-1);
+    var dt=b.getAttribute('data-tab');
+    if(dt){b.classList.toggle('on',dt===name);}
+    else{b.classList.toggle('on',b.getAttribute('onclick')&&b.getAttribute('onclick').indexOf("'"+name+"'")>-1);}
   });
   ['dashboard','nueva','historial','personal','productos','gastos'].forEach(function(t){
     document.getElementById(t).style.display=t===name?'block':'none';
