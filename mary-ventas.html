@@ -839,13 +839,25 @@ function renderPersonalList(){
     var ult=asisHoy.length?asisHoy[asisHoy.length-1]:null;
     var dc='dot-none';
     if(ult){dc=ult.estado==='entrada'?'dot-in':ult.estado==='salida'?'dot-out':'dot-abs';}
-    html+='<div class="row" style="cursor:pointer" onclick="openEmp(\''+p.id+'\')">';
-    html+='<div style="display:flex;align-items:center;gap:10px">';
+    // Estado asistencia hoy
+    var estadoHoy=ult?ult.estado:null;
+    var dotColor=estadoHoy==='asistio'?'#185FA5':estadoHoy==='medio tiempo'?'#854F0B':estadoHoy==='no asistio'?'#A32D2D':'#ccc';
+    var estadoLabel=estadoHoy?estadoHoy:'sin marcar';
+    html+='<div style="border-bottom:0.5px solid #f0e8d8;padding:12px 0">';
+    // Fila superior: avatar + nombre + saldo
+    html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px" onclick="openEmp(\''+p.id+'\');" style="cursor:pointer">';
     html+='<div class="emp-avatar">'+initials(p.nombre)+'</div>';
-    html+='<div><div class="rn"><span class="dot '+dc+'"></span>'+p.nombre+'</div>';
-    html+='<div class="rm">'+p.cargo+' · '+fmt(p.sueldo||0)+'</div></div></div>';
+    html+='<div style="flex:1"><div class="rn">'+p.nombre+'</div>';
+    html+='<div class="rm">'+p.cargo+' · <span style="color:'+dotColor+'">'+estadoLabel+'</span></div></div>';
     html+='<div style="text-align:right"><div style="font-size:13px;font-weight:600;color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</div>';
     html+='<div style="font-size:10px;color:#aaa">saldo mes</div></div></div>';
+    // Botones de asistencia directa
+    html+='<div style="display:flex;gap:6px">';
+    html+='<button data-empid="'+p.id+'" data-empnombre="'+p.nombre+'" data-fecha="'+today()+'" onclick="abrirModalAsisDt(this)" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='asistio'?'#185FA5':'#ddd')+';background:'+(estadoHoy==='asistio'?'#185FA5':'#fff')+';color:'+(estadoHoy==='asistio'?'#fff':'#555')+';font-size:12px;cursor:pointer">✓ Asistió</button>';
+    html+='<button data-empid="'+p.id+'" data-empnombre="'+p.nombre+'" data-fecha="'+today()+'" onclick="abrirModalAsisDt(this)" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='medio tiempo'?'#854F0B':'#ddd')+';background:'+(estadoHoy==='medio tiempo'?'#854F0B':'#fff')+';color:'+(estadoHoy==='medio tiempo'?'#fff':'#555')+';font-size:12px;cursor:pointer">◑ Medio</button>';
+    html+='<button data-empid="'+p.id+'" data-empnombre="'+p.nombre+'" data-fecha="'+today()+'" onclick="abrirModalAsisDt(this)" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='no asistio'?'#A32D2D':'#ddd')+';background:'+(estadoHoy==='no asistio'?'#A32D2D':'#fff')+';color:'+(estadoHoy==='no asistio'?'#fff':'#555')+';font-size:12px;cursor:pointer">✕ Faltó</button>';
+    html+='<button onclick="openEmp(\''+p.id+'\')" style="padding:7px 10px;border-radius:8px;border:1.5px solid #ddd;background:#fff;color:#555;font-size:12px;cursor:pointer">Ver →</button>';
+    html+='</div></div>';
   });}
   html+='</div>';
   html+='<div class="card"><div class="sl">Agregar empleado</div>';
