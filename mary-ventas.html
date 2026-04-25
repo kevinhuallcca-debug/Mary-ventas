@@ -504,7 +504,9 @@ function renderDashboard(){
   if(hoy.length===0){html+='<div class="empty">Sin ventas hoy</div>';}
   else{hoy.slice(0,6).forEach(function(v){
     html+='<div class="row"><div><div class="rn">'+v.producto+'<span class="badge '+turnoClass(v.turno)+'">'+turnoLabel(v.turno)+'</span></div>';
-    html+='<div class="rm">'+v.cantidad+' x '+fmt(v.precioUnit)+' - '+v.hora+'</div></div>';
+    html+='<div class="rm">'+v.cantidad+' x '+fmt(v.precioUnit)+' - '+v.hora;
+      html+=(v.pago==='yape'?' · <span style="color:#7b2fff;font-weight:600">Yape</span>':' · Efectivo');
+      html+='</div></div>';
     html+='<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div>';
     html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>';
   });}
@@ -521,7 +523,8 @@ function renderNueva(){
   html+='<div class="field"><label>Total</label><input type="text" id="np-total" readonly class="total-field"></div></div>';
   html+='<div class="g2"><div class="field"><label>Turno</label><select id="np-turno"><option value="desayuno">Desayuno</option><option value="almuerzo" selected>Almuerzo</option><option value="cena">Cena</option><option value="otro">Otro</option></select></div>';
   html+='<div class="field"><label>Fecha</label><input type="date" id="np-fecha" value="'+today()+'"></div></div>';
-  html+='<div class="field"><label>Observacion</label><input type="text" id="np-obs" placeholder="Ej: para llevar..."></div>';
+  html+='<div class="g2"><div class="field"><label>Metodo de pago</label><select id="np-pago"><option value="efectivo">💵 Efectivo</option><option value="yape">💜 Yape</option></select></div>';
+  html+='<div class="field"><label>Observacion</label><input type="text" id="np-obs" placeholder="Ej: para llevar..."></div></div>';
   html+='<button class="btn" onclick="guardarVenta()">Registrar venta</button></div>';
   document.getElementById('nueva').innerHTML=html;actualizarPrecio();
 }
@@ -546,6 +549,7 @@ function guardarVenta(){
   var turno=document.getElementById('np-turno').value;
   var fecha=document.getElementById('np-fecha').value||today();
   var obs=document.getElementById('np-obs').value;
+  var pago=document.getElementById('np-pago')?document.getElementById('np-pago').value:'efectivo';
   if(!prod||cant<=0||precio<=0){showToast('Completa todos los campos',true);return;}
   db.ref('ventas').push({producto:prod.nombre,prodId:prod.id,cantidad:cant,precioUnit:precio,total:cant*precio,turno:turno,fecha:fecha,hora:nowTime(),obs:obs,timestamp:new Date().toISOString()})
     .then(function(){showToast('Venta registrada - '+fmt(cant*precio));showTab('dashboard');});
@@ -561,6 +565,8 @@ function renderHistorial(){
     if(filterDate&&v.fecha!==filterDate)return false;return true;
   });
   var totalFiltrado=filtradas.reduce(function(a,v){return a+v.total},0);
+  var totalYape=filtradas.filter(function(v){return v.pago==='yape'}).reduce(function(a,v){return a+v.total},0);
+  var totalEfectivo=filtradas.filter(function(v){return v.pago!=='yape'}).reduce(function(a,v){return a+v.total},0);
   var html='<div class="card"><div class="sl">Filtros</div><div class="frow">';
   ['todos','desayuno','almuerzo','cena'].forEach(function(t){
     html+='<button class="fb '+(filterTurno===t?'on':'')+'" onclick="setFilter(\''+t+'\')">'+(t==='todos'?'Todos':turnoLabel(t))+'</button>';
@@ -569,10 +575,16 @@ function renderHistorial(){
   html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">';
   html+='<div class="sl" style="margin:0">'+filtradas.length+' ventas</div>';
   html+='<div style="font-size:15px;font-weight:600;color:#0F6E56">'+fmt(totalFiltrado)+'</div></div>';
+  html+='<div style="display:flex;gap:10px;margin-bottom:12px">';
+  html+='<div style="flex:1;background:#f5f0ff;border-radius:8px;padding:10px;text-align:center"><div style="font-size:10px;color:#7b2fff;text-transform:uppercase;letter-spacing:1px">Yape</div><div style="font-size:16px;font-weight:600;color:#7b2fff">'+fmt(totalYape)+'</div></div>';
+  html+='<div style="flex:1;background:#f0faf5;border-radius:8px;padding:10px;text-align:center"><div style="font-size:10px;color:#0F6E56;text-transform:uppercase;letter-spacing:1px">Efectivo</div><div style="font-size:16px;font-weight:600;color:#0F6E56">'+fmt(totalEfectivo)+'</div></div>';
+  html+='</div>';
   if(filtradas.length===0){html+='<div class="empty">Sin ventas</div>';}
   else{filtradas.forEach(function(v){
     html+='<div class="row"><div><div class="rn">'+v.producto+'<span class="badge '+turnoClass(v.turno)+'">'+turnoLabel(v.turno)+'</span></div>';
-    html+='<div class="rm">'+fmtDate(v.fecha)+' '+v.hora+' - '+v.cantidad+' x '+fmt(v.precioUnit)+(v.obs?' - '+v.obs:'')+'</div></div>';
+    html+='<div class="rm">'+fmtDate(v.fecha)+' '+v.hora+' - '+v.cantidad+' x '+fmt(v.precioUnit)+(v.obs?' - '+v.obs:'');
+    html+=(v.pago==='yape'?' · <span style="color:#7b2fff;font-weight:600">Yape</span>':' · Efectivo');
+    html+='</div></div>';
     html+='<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div>';
     html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>';
   });}
