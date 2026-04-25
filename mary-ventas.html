@@ -327,7 +327,7 @@ function showCajeroApp(){
   document.getElementById('app').style.display='block';
   document.getElementById('user-badge').textContent='Cajero: '+(currentUser.nombre||'');
   var nav=document.querySelector('.nav');
-  nav.innerHTML='<button class="nb on" onclick="showTab('nueva')">+ Venta</button>';
+  nav.innerHTML='<button class="nb on" onclick="showTab(\'nueva\')">+ Venta</button>';
   showTab('nueva');
 }
 
