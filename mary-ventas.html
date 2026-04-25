@@ -180,6 +180,7 @@ body{font-family:'Source Sans 3',sans-serif;background:#fdf8f0;color:#1a1a1a;min
   <div id="historial" style="display:none"></div>
   <div id="personal" style="display:none"></div>
   <div id="productos" style="display:none"></div>
+  <div id="gastos" style="display:none"></div>
 </div>
 
 <!-- VISTA EMPLEADO -->
@@ -212,7 +213,7 @@ var auth = firebase.auth();
 var db = firebase.database();
 
 var currentUser = null; // { rol: 'admin'|'empleado', personalId, nombre }
-var ventas=[],productos=[],personal=[],asistencias=[],adelantos=[],pagos=[],cajaAperturas=[];
+var ventas=[],productos=[],personal=[],asistencias=[],adelantos=[],pagos=[],cajaAperturas=[],gastos=[];
 var activeTab='dashboard',filterTurno='todos',filterDate='';
 var selectedEmpId=null,selectedEmpSubTab='asistencia';
 var filterAsisDate='',filterMes='';
@@ -328,7 +329,7 @@ function showCajeroApp(){
   document.getElementById('app').style.display='block';
   document.getElementById('user-badge').textContent='Cajero: '+(currentUser.nombre||'');
   var nav=document.querySelector('.nav');
-  nav.innerHTML='<button class="nb on" onclick="showTab(\'dashboard\')>Resumen</button><button class="nb" onclick="showTab(\'nueva\')">+ Venta</button><button class="nb" onclick="showTab(\'historial\')">Historial</button><button class="nb" onclick="showTab(\'productos\')">Productos</button>';
+  nav.innerHTML='<button class="nb on" onclick="showTab(\'dashboard\')>Resumen</button><button class="nb" onclick="showTab(\'nueva\')">+ Venta</button><button class="nb" onclick="showTab(\'historial\')">Historial</button><button class="nb" onclick="showTab(\'productos\')">Productos</button><button class="nb" onclick="showTab(\'gastos\')">Gastos</button>';
   showTab('dashboard');
 }
 
@@ -351,7 +352,8 @@ function showAdminApp(){
     '<button class="nb" onclick="showTab(\'nueva\')">+ Venta</button>',
     '<button class="nb" onclick="showTab(\'historial\')">Historial</button>',
     '<button class="nb" onclick="showTab(\'personal\')">Personal</button>',
-    '<button class="nb" onclick="showTab(\'productos\')">Productos</button>'].join('');
+    '<button class="nb" onclick="showTab(\'productos\')">Productos</button>',
+    '<button class="nb" onclick="showTab(\'gastos\')">Gastos</button>'].join('');
   render();
 }
 
@@ -482,6 +484,10 @@ function startListeners(){
     cajaAperturas=[];snap.forEach(function(c){cajaAperturas.push(Object.assign({id:c.key},c.val()))});
     render();
   });
+  db.ref('gastos').on('value',function(snap){
+    gastos=[];snap.forEach(function(c){gastos.push(Object.assign({id:c.key},c.val()))});
+    render();
+  });
 }
 
 // Cargar personal para el login de empleados (sin autenticacion)
@@ -508,7 +514,7 @@ function showTab(name){
   document.querySelectorAll('.nb').forEach(function(b){
     b.classList.toggle('on',b.getAttribute('onclick')&&b.getAttribute('onclick').indexOf("'"+name+"'")>-1);
   });
-  ['dashboard','nueva','historial','personal','productos'].forEach(function(t){
+  ['dashboard','nueva','historial','personal','productos','gastos'].forEach(function(t){
     document.getElementById(t).style.display=t===name?'block':'none';
   });
   render();
@@ -519,6 +525,7 @@ function render(){
   else if(activeTab==='nueva')renderNueva();
   else if(activeTab==='historial')renderHistorial();
   else if(activeTab==='personal'){if(selectedEmpId)renderEmpDetail();else renderPersonalList();}
+  else if(activeTab==='gastos')renderGastos();
   else if(activeTab==='productos')renderProductos();
 }
 
@@ -1002,6 +1009,89 @@ function liquidarAdelantos(personalId,nombre,mes){
   var adEmp=adelantos.filter(function(a){return a.personalId===personalId&&a.fecha.slice(0,7)===mes&&!a.liquidado});
   var promesas=adEmp.map(function(a){return db.ref('adelantos/'+a.id).update({liquidado:true});});
   Promise.all(promesas).then(function(){showToast('Adelantos marcados como pagados');});
+}
+
+function renderGastos(){
+  var gastosHoy=gastos.filter(function(g){return g.fecha===today();});
+  var totalHoy=gastosHoy.reduce(function(a,g){return a+g.monto;},0);
+  var totalGeneral=gastos.reduce(function(a,g){return a+g.monto;},0);
+
+  var html='<div class="card"><div class="sl">Registrar gasto</div>';
+  html+='<div class="field"><label>¿Que se va a comprar?</label>';
+  html+='<input type="text" id="gasto-desc" placeholder="Ej: Aceite, Gas, Servilletas..." style="width:100%;border:1px solid #e0d5c5;border-radius:8px;padding:12px 14px;font-size:16px;font-family:inherit"></div>';
+  html+='<div class="field"><label>Monto (S/)</label>';
+  html+='<input type="number" id="gasto-monto" placeholder="0.00" min="0" step="0.01" style="width:100%;border:1px solid #e0d5c5;border-radius:8px;padding:12px 14px;font-size:16px;font-family:inherit"></div>';
+  html+='<div class="field"><label>Metodo de pago</label>';
+  html+='<div style="display:flex;gap:10px">';
+  html+='<button id="gpago-ef" onclick="selGastoPago(\'efectivo\')" style="flex:1;padding:10px;border-radius:8px;border:2px solid #8b0000;background:#8b0000;color:#fff;cursor:pointer;font-size:14px">Efectivo</button>';
+  html+='<button id="gpago-yp" onclick="selGastoPago(\'yape\')" style="flex:1;padding:10px;border-radius:8px;border:2px solid #ddd;background:#fff;color:#555;cursor:pointer;font-size:14px">Yape</button>';
+  html+='</div></div>';
+  html+='<button onclick="guardarGasto()" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:14px;font-size:16px;width:100%;cursor:pointer;margin-top:4px">Registrar gasto</button>';
+  html+='</div>';
+
+  html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+  html+='<div class="sl" style="margin:0">Gastos de hoy</div>';
+  html+='<div style="font-size:16px;color:#A32D2D">- '+fmt(totalHoy)+'</div></div>';
+  if(gastosHoy.length===0){html+='<div class="empty">Sin gastos hoy</div>';}
+  else{
+    gastosHoy.slice().reverse().forEach(function(g){
+      html+='<div class="row"><div>';
+      html+='<div class="rn">'+g.descripcion+'</div>';
+      html+='<div class="rm">'+g.hora+(g.pago==='yape'?' · <span style="color:#7b2fff">Yape</span>':' · Efectivo')+'</div>';
+      html+='</div>';
+      html+='<div style="display:flex;align-items:center;gap:6px">';
+      html+='<div class="ra" style="color:#A32D2D">-'+fmt(g.monto)+'</div>';
+      html+='<button class="btnd" onclick="eliminarGasto(\''+g.id+'\')">x</button>';
+      html+='</div></div>';
+    });
+  }
+  html+='</div>';
+
+  html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center">';
+  html+='<div class="sl" style="margin:0">Total acumulado</div>';
+  html+='<div style="font-size:16px;color:#A32D2D">- '+fmt(totalGeneral)+'</div></div></div>';
+
+  document.getElementById('gastos').innerHTML=html;
+  window._gastoPago='efectivo';
+}
+
+function selGastoPago(tipo){
+  window._gastoPago=tipo;
+  var ef=document.getElementById('gpago-ef');
+  var yp=document.getElementById('gpago-yp');
+  if(tipo==='efectivo'){
+    ef.style.background='#8b0000';ef.style.color='#fff';ef.style.borderColor='#8b0000';
+    yp.style.background='#fff';yp.style.color='#555';yp.style.borderColor='#ddd';
+  } else {
+    yp.style.background='#7b2fff';yp.style.color='#fff';yp.style.borderColor='#7b2fff';
+    ef.style.background='#fff';ef.style.color='#555';ef.style.borderColor='#ddd';
+  }
+}
+
+function guardarGasto(){
+  var desc=document.getElementById('gasto-desc').value.trim();
+  var monto=parseFloat(document.getElementById('gasto-monto').value)||0;
+  if(!desc){showToast('Escribe que se va a comprar');return;}
+  if(monto<=0){showToast('Ingresa un monto valido');return;}
+  var pago=window._gastoPago||'efectivo';
+  db.ref('gastos').push({
+    descripcion:desc,
+    monto:monto,
+    pago:pago,
+    fecha:today(),
+    hora:nowTime(),
+    registradoPor:currentUser?currentUser.nombre:'',
+    timestamp:new Date().toISOString()
+  }).then(function(){
+    showToast('Gasto registrado: '+fmt(monto));
+    document.getElementById('gasto-desc').value='';
+    document.getElementById('gasto-monto').value='';
+  });
+}
+
+function eliminarGasto(id){
+  if(!confirm('¿Eliminar este gasto?'))return;
+  db.ref('gastos/'+id).remove().then(function(){showToast('Gasto eliminado');});
 }
 
 function renderProductos(){
