@@ -853,9 +853,9 @@ function renderPersonalList(){
     html+='<div style="font-size:10px;color:#aaa">saldo mes</div></div></div>';
     // Botones de asistencia directa
     html+='<div style="display:flex;gap:6px">';
-    html+='<button data-empid="'+p.id+'" data-empnombre="'+p.nombre+'" data-fecha="'+today()+'" onclick="abrirModalAsisDt(this)" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='asistio'?'#185FA5':'#ddd')+';background:'+(estadoHoy==='asistio'?'#185FA5':'#fff')+';color:'+(estadoHoy==='asistio'?'#fff':'#555')+';font-size:12px;cursor:pointer">✓ Asistió</button>';
-    html+='<button data-empid="'+p.id+'" data-empnombre="'+p.nombre+'" data-fecha="'+today()+'" onclick="abrirModalAsisDt(this)" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='medio tiempo'?'#854F0B':'#ddd')+';background:'+(estadoHoy==='medio tiempo'?'#854F0B':'#fff')+';color:'+(estadoHoy==='medio tiempo'?'#fff':'#555')+';font-size:12px;cursor:pointer">◑ Medio</button>';
-    html+='<button data-empid="'+p.id+'" data-empnombre="'+p.nombre+'" data-fecha="'+today()+'" onclick="abrirModalAsisDt(this)" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='no asistio'?'#A32D2D':'#ddd')+';background:'+(estadoHoy==='no asistio'?'#A32D2D':'#fff')+';color:'+(estadoHoy==='no asistio'?'#fff':'#555')+';font-size:12px;cursor:pointer">✕ Faltó</button>';
+    html+='<button onclick="marcarAsisDirecto(\''+p.id+'\',\''+p.nombre+'\',\'asistio\')" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='asistio'?'#185FA5':'#ddd')+';background:'+(estadoHoy==='asistio'?'#185FA5':'#fff')+';color:'+(estadoHoy==='asistio'?'#fff':'#555')+';font-size:12px;cursor:pointer">✓ Asistió</button>';
+    html+='<button onclick="marcarAsisDirecto(\''+p.id+'\',\''+p.nombre+'\',\'medio tiempo\')" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='medio tiempo'?'#854F0B':'#ddd')+';background:'+(estadoHoy==='medio tiempo'?'#854F0B':'#fff')+';color:'+(estadoHoy==='medio tiempo'?'#fff':'#555')+';font-size:12px;cursor:pointer">◑ Medio</button>';
+    html+='<button onclick="marcarAsisDirecto(\''+p.id+'\',\''+p.nombre+'\',\'no asistio\')" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='no asistio'?'#A32D2D':'#ddd')+';background:'+(estadoHoy==='no asistio'?'#A32D2D':'#fff')+';color:'+(estadoHoy==='no asistio'?'#fff':'#555')+';font-size:12px;cursor:pointer">✕ Faltó</button>';
     html+='<button onclick="openEmp(\''+p.id+'\')" style="padding:7px 10px;border-radius:8px;border:1.5px solid #ddd;background:#fff;color:#555;font-size:12px;cursor:pointer">Ver →</button>';
     html+='</div></div>';
   });}
@@ -1126,6 +1126,11 @@ function confirmarAsis(estado){
   var fecha=window._modalFecha;
   db.ref('asistencias').push({personalId:empId,nombre:empNombre,estado:estado,fecha:fecha,hora:nowTime(),timestamp:new Date().toISOString()})
     .then(function(){showToast(empNombre+' — '+estado);cerrarModalAsis();});
+}
+
+function marcarAsisDirecto(personalId, nombre, estado){
+  db.ref('asistencias').push({personalId:personalId,nombre:nombre,estado:estado,fecha:today(),hora:nowTime(),timestamp:new Date().toISOString()})
+    .then(function(){showToast(nombre+' — '+estado);});
 }
 
 function marcarAsis(personalId,nombre,estado){
