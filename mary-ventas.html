@@ -342,7 +342,6 @@ function showCajeroApp(){
   nav.innerHTML=[
     '<button class="nb" data-tab="dashboard" onclick="showTab(\'dashboard\')">Resumen</button>',
     '<button class="nb" data-tab="nueva" onclick="showTab(\'nueva\')">+ Venta</button>',
-    '<button class="nb" data-tab="productos" onclick="showTab(\'productos\')">Productos</button>',
     '<button class="nb" data-tab="gastos" onclick="showTab(\'gastos\')">Gastos</button>'
   ].join('');
   showTab('dashboard');
@@ -585,7 +584,8 @@ function renderDashboard(){
       html+=(v.pago==='yape'?' · <span style="color:#7b2fff;font-weight:600">Yape</span>':' · Efectivo');
       html+='</div></div>';
     html+='<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div>';
-    html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>';
+    if(!currentUser||currentUser.rol!=='cajero'){html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button>';}
+    html+='</div></div>';
   });}
   html+='</div>';
 
@@ -759,7 +759,8 @@ function renderHistorial(){
     html+=(v.pago==='yape'?' · <span style="color:#7b2fff;font-weight:600">Yape</span>':' · Efectivo');
     html+='</div></div>';
     html+='<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div>';
-    html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>';
+    if(!currentUser||currentUser.rol!=='cajero'){html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button>';}
+    html+='</div></div>';
   });}
   html+='</div>';
 
