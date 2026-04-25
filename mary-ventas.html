@@ -129,6 +129,7 @@ body{font-family:'Source Sans 3',sans-serif;background:#fdf8f0;color:#1a1a1a;min
     <div class="login-tabs">
       <button class="ltab on" onclick="switchLoginTab('admin')">Administrador</button>
       <button class="ltab" onclick="switchLoginTab('empleado')">Empleado</button>
+      <button class="ltab" onclick="switchLoginTab('cajero')">Cajero</button>
     </div>
     <!-- Admin login -->
     <div id="login-admin">
@@ -143,6 +144,14 @@ body{font-family:'Source Sans 3',sans-serif;background:#fdf8f0;color:#1a1a1a;min
       </div>
       <div class="lfield"><label>Tu PIN</label><input type="password" id="emp-pin" placeholder="••••" maxlength="6" onkeydown="if(event.key==='Enter')loginEmpleado()"></div>
       <button class="lbtn" onclick="loginEmpleado()">Ingresar</button>
+    </div>
+    <!-- Cajero login -->
+    <div id="login-cajero" style="display:none">
+      <div class="lfield"><label>Selecciona tu nombre</label>
+        <select id="cajero-select"><option value="">-- Elige tu nombre --</option></select>
+      </div>
+      <div class="lfield"><label>Tu PIN</label><input type="password" id="cajero-pin" placeholder="••••" maxlength="6" onkeydown="if(event.key==='Enter')loginCajero()"></div>
+      <button class="lbtn" onclick="loginCajero()">Ingresar como Cajero</button>
     </div>
     <div class="lerror" id="login-error"></div>
   </div>
@@ -202,7 +211,7 @@ var auth = firebase.auth();
 var db = firebase.database();
 
 var currentUser = null; // { rol: 'admin'|'empleado', personalId, nombre }
-var ventas=[],productos=[],personal=[],asistencias=[],adelantos=[],pagos=[];
+var ventas=[],productos=[],personal=[],asistencias=[],adelantos=[],pagos=[],cajaAperturas=[];
 var activeTab='dashboard',filterTurno='todos',filterDate='';
 var selectedEmpId=null,selectedEmpSubTab='asistencia';
 var filterAsisDate='',filterMes='';
@@ -251,6 +260,9 @@ function showLoginScreen(){
   document.getElementById('app').style.display='none';
   document.getElementById('emp-app').style.display='none';
   var ls=document.getElementById('login-screen');
+  // Populate cajero select
+  var csel=document.getElementById('cajero-select');
+  if(csel){csel.innerHTML='<option value="">-- Elige tu nombre --</option>';personal.forEach(function(p){csel.innerHTML+='<option value="'+p.id+'">'+p.nombre+'</option>';});}
   ls.style.display='flex';ls.style.flexDirection='column';ls.style.alignItems='center';ls.style.justifyContent='center';
   // Poblar select de empleados
   var sel=document.getElementById('emp-select');
@@ -262,10 +274,16 @@ function showLoginScreen(){
 
 function switchLoginTab(tab){
   loginTab=tab;
-  document.querySelectorAll('.ltab').forEach(function(b,i){b.classList.toggle('on',i===(tab==='admin'?0:1));});
+  document.querySelectorAll('.ltab').forEach(function(b,i){b.classList.toggle('on',['admin','empleado','cajero'][i]===tab);});
   document.getElementById('login-admin').style.display=tab==='admin'?'block':'none';
   document.getElementById('login-empleado').style.display=tab==='empleado'?'block':'none';
+  document.getElementById('login-cajero').style.display=tab==='cajero'?'block':'none';
   document.getElementById('login-error').textContent='';
+  if(tab==='cajero'){
+    var sel=document.getElementById('cajero-select');
+    sel.innerHTML='<option value="">-- Elige tu nombre --</option>';
+    personal.forEach(function(p){sel.innerHTML+='<option value="'+p.id+'">'+p.nombre+'</option>';});
+  }
 }
 
 function loginAdmin(){
@@ -288,6 +306,32 @@ function loginEmpleado(){
   currentUser={rol:'empleado',personalId:emp.id,nombre:emp.nombre};
   document.getElementById('login-screen').style.display='none';
   showEmpApp(emp);
+}
+
+
+function loginCajero(){
+  var empId=document.getElementById('cajero-select').value;
+  var pin=document.getElementById('cajero-pin').value.trim();
+  if(!empId||!pin){document.getElementById('login-error').textContent='Selecciona tu nombre e ingresa tu PIN';return;}
+  var emp=null;for(var i=0;i<personal.length;i++){if(personal[i].id===empId){emp=personal[i];break;}}
+  if(!emp||!emp.pin){document.getElementById('login-error').textContent='Empleado no encontrado';return;}
+  if(emp.pin.toString()!==pin.toString()){document.getElementById('login-error').textContent='PIN incorrecto';return;}
+  currentUser={rol:'cajero',personalId:emp.id,nombre:emp.nombre};
+  document.getElementById('login-screen').style.display='none';
+  showCajeroApp();
+}
+
+function showCajeroApp(){
+  document.getElementById('loader').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('emp-app').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('user-badge').textContent='Cajero: '+(currentUser.nombre||'');
+  // Ocultar todas las tabs menos + Venta
+  var nav=document.querySelector('.nav');
+  nav.innerHTML='<button class="nb on" onclick="showTab('nueva')">+ Venta</button>';
+  showTab('nueva');
+  render();
 }
 
 function logout(){
@@ -430,6 +474,10 @@ function startListeners(){
     pagos=[];snap.forEach(function(c){pagos.push(Object.assign({id:c.key},c.val()))});
     render();
   });
+  db.ref('cajaAperturas').on('value',function(snap){
+    cajaAperturas=[];snap.forEach(function(c){cajaAperturas.push(Object.assign({id:c.key},c.val()))});
+    render();
+  });
 }
 
 // Cargar personal para el login de empleados (sin autenticacion)
@@ -511,7 +559,80 @@ function renderDashboard(){
     html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>';
   });}
   html+='</div>';
+
+  // APERTURA DE CAJA
+  var aperHoy=cajaAperturas.filter(function(a){return a.fecha===today();});
+  var aper=aperHoy.length?aperHoy[aperHoy.length-1]:null;
+  var billetes=[200,100,50,20,10,5,2,1,0.5,0.2,0.1];
+  html+='<div class="card"><div class="sl">Apertura de caja</div>';
+  if(aper){
+    html+='<div style="background:#f0f7f0;border-radius:8px;padding:12px;margin-bottom:10px;text-align:center">';
+    html+='<div style="font-size:13px;color:#555">Total apertura</div>';
+    html+='<div style="font-size:26px;color:#0F6E56">'+fmt(aper.total)+'</div>';
+    html+='<div style="font-size:11px;color:#888;margin-top:2px">Registrado a las '+aper.hora+'</div></div>';
+    var detalles=billetes.filter(function(b){return aper.billetes&&aper.billetes['b'+b]>0;});
+    if(detalles.length){
+      html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">';
+      detalles.forEach(function(b){
+        var cant=aper.billetes['b'+b];
+        html+='<div style="background:#f9f5ef;border:0.5px solid #ddd;border-radius:6px;padding:6px;text-align:center">';
+        html+='<div style="font-size:11px;color:#888">S/'+b+'</div>';
+        html+='<div style="font-size:14px">x'+cant+'</div>';
+        html+='<div style="font-size:11px;color:#0F6E56">='+fmt(b*cant)+'</div></div>';
+      });
+      html+='</div>';
+    }
+    html+='<button class="btnd" style="margin-top:10px;width:100%;border-radius:6px;padding:8px;font-size:12px" onclick="eliminarApertura(\''+aper.id+'\')">Editar / Borrar</button>';
+  } else {
+    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">';
+    billetes.forEach(function(b){
+      var bid='bil'+b.toString().replace('.','_');
+      html+='<div style="background:#f9f5ef;border:0.5px solid #ddd;border-radius:8px;padding:8px;text-align:center">';
+      html+='<div style="font-size:13px;color:#555;margin-bottom:4px">S/'+b+'</div>';
+      html+='<input type="number" min="0" value="0" id="'+bid+'" style="width:100%;text-align:center;border:1px solid #ddd;border-radius:6px;padding:6px;font-size:15px" oninput="calcApertura()">';
+      html+='</div>';
+    });
+    html+='</div>';
+    html+='<div style="background:#f0f7f0;border-radius:8px;padding:10px;text-align:center;margin-bottom:10px">';
+    html+='<div style="font-size:12px;color:#555">Total en caja</div>';
+    html+='<div style="font-size:22px;color:#0F6E56" id="total-apertura">S/ 0.00</div></div>';
+    html+='<button onclick="guardarApertura()" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;width:100%;cursor:pointer">Registrar apertura de caja</button>';
+  }
+  html+='</div>';
+
   document.getElementById('dashboard').innerHTML=html;
+}
+
+function calcApertura(){
+  var billetes=[200,100,50,20,10,5,2,1,0.5,0.2,0.1];
+  var total=0;
+  billetes.forEach(function(b){
+    var bid='bil'+b.toString().replace('.','_');
+    var el=document.getElementById(bid);
+    if(el){var cant=parseFloat(el.value)||0;total+=cant*b;}
+  });
+  var el=document.getElementById('total-apertura');
+  if(el)el.textContent='S/ '+total.toFixed(2);
+}
+
+function guardarApertura(){
+  var billetes=[200,100,50,20,10,5,2,1,0.5,0.2,0.1];
+  var total=0;var bills={};
+  billetes.forEach(function(b){
+    var bid='bil'+b.toString().replace('.','_');
+    var el=document.getElementById(bid);
+    var cant=el?parseFloat(el.value)||0:0;
+    if(cant>0){bills['b'+b]=cant;}
+    total+=cant*b;
+  });
+  if(total<=0){showToast('Ingresa al menos un billete o moneda');return;}
+  db.ref('cajaAperturas').push({fecha:today(),hora:nowTime(),total:total,billetes:bills,timestamp:new Date().toISOString()})
+    .then(function(){showToast('Apertura registrada: '+fmt(total));});
+}
+
+function eliminarApertura(id){
+  if(!confirm('¿Borrar registro de apertura?'))return;
+  db.ref('cajaAperturas/'+id).remove().then(function(){showToast('Registro eliminado');});
 }
 
 function renderNueva(){
