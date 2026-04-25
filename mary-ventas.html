@@ -504,8 +504,8 @@ setTimeout(function(){
 // ── RENDER ADMIN ──────────────────────────────────────────────
 function showTab(name){
   activeTab=name;selectedEmpId=null;
-  document.querySelectorAll('.nb').forEach(function(b,i){
-    b.classList.toggle('on',['dashboard','nueva','historial','personal','productos'][i]===name);
+  document.querySelectorAll('.nb').forEach(function(b){
+    b.classList.toggle('on',b.getAttribute('onclick')&&b.getAttribute('onclick').indexOf("'"+name+"'")>-1);
   });
   ['dashboard','nueva','historial','personal','productos'].forEach(function(t){
     document.getElementById(t).style.display=t===name?'block':'none';
@@ -513,7 +513,7 @@ function showTab(name){
   render();
 }
 function render(){
-  if(!currentUser||currentUser.rol!=='admin')return;
+  if(!currentUser||(currentUser.rol!=='admin'&&currentUser.rol!=='cajero'))return;
   if(activeTab==='dashboard')renderDashboard();
   else if(activeTab==='nueva')renderNueva();
   else if(activeTab==='historial')renderHistorial();
@@ -953,3 +953,13 @@ function editarPrecio(id,val){
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
