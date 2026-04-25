@@ -561,8 +561,29 @@ function renderDashboard(){
   html+='</div>';
   html+='<div class="card"><div class="sl">Ventas por turno hoy</div>';
   [['desayuno',d],['almuerzo',al],['cena',c]].forEach(function(it){
-    html+='<div class="bar-row"><div class="bar-label"><span>'+turnoLabel(it[0])+'</span><span>'+fmt(it[1])+'</span></div>';
+    var turnoVentas=hoy.filter(function(v){return v.turno===it[0];});
+    // Agrupar productos
+    var prods={};
+    turnoVentas.forEach(function(v){
+      if(!prods[v.producto]){prods[v.producto]={cant:0,total:0};}
+      prods[v.producto].cant+=v.cantidad;
+      prods[v.producto].total+=v.total;
+    });
+    html+='<div style="margin-bottom:12px">';
+    html+='<div class="bar-row"><div class="bar-label"><span style="font-weight:600">'+turnoLabel(it[0])+'</span><span>'+fmt(it[1])+'</span></div>';
     html+='<div class="bar-bg"><div class="bar-fill" style="width:'+((it[1]/maxBar*100).toFixed(0))+'%"></div></div></div>';
+    if(Object.keys(prods).length>0){
+      html+='<div style="padding:6px 0 0 4px">';
+      Object.keys(prods).forEach(function(nom){
+        var pr=prods[nom];
+        html+='<div style="display:flex;justify-content:space-between;font-size:13px;color:#666;padding:3px 0;border-bottom:0.5px solid #f0ede8">';
+        html+='<span>'+nom+'</span>';
+        html+='<span style="color:#555"><strong>x'+pr.cant+'</strong> &nbsp;'+fmt(pr.total)+'</span>';
+        html+='</div>';
+      });
+      html+='</div>';
+    }
+    html+='</div>';
   });
   html+='</div>';
   html+='<div class="card"><div class="sl">Asistencia hoy</div>';
