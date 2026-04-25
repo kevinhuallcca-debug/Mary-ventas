@@ -327,6 +327,7 @@ function loginCajero(){
   if(!emp||!emp.pin){document.getElementById('login-error').textContent='Empleado no encontrado';return;}
   if(emp.pin.toString()!==pin.toString()){document.getElementById('login-error').textContent='PIN incorrecto';return;}
   currentUser={rol:'cajero',personalId:emp.id,nombre:emp.nombre};
+  startListeners();
   document.getElementById('login-screen').style.display='none';
   showCajeroApp();
 }
