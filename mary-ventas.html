@@ -193,6 +193,7 @@ body{font-family:'Source Sans 3',sans-serif;background:#fdf8f0;color:#1a1a1a;min
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -618,9 +619,52 @@ function renderHistorial(){
   var totalFiltrado=filtradas.reduce(function(a,v){return a+v.total},0);
   var totalYape=filtradas.filter(function(v){return v.pago==='yape'}).reduce(function(a,v){return a+v.total},0);
   var totalEfectivo=filtradas.filter(function(v){return v.pago!=='yape'}).reduce(function(a,v){return a+v.total},0);
-  var html='<div class="card"><div class="sl">Filtros</div><div class="frow">';
+
+  // --- Datos para graficos ---
+  // Diario: ultimos 7 dias
+  var dias7=[]; var labels7=[];
+  for(var d=6;d>=0;d--){
+    var dd=new Date(); dd.setDate(dd.getDate()-d);
+    var ds=dd.toISOString().slice(0,10);
+    var lbl=dd.toLocaleDateString('es-PE',{weekday:'short',day:'numeric'});
+    labels7.push(lbl);
+    dias7.push(ventas.filter(function(v){return v.fecha===ds;}).reduce(function(a,v){return a+v.total;},0));
+  }
+  // Semanal: ultimas 8 semanas
+  var semanas8=[]; var labelsS=[];
+  for(var w=7;w>=0;w--){
+    var wStart=new Date(); wStart.setDate(wStart.getDate()-wStart.getDay()-w*7);
+    var wEnd=new Date(wStart); wEnd.setDate(wStart.getDate()+6);
+    var ws=wStart.toISOString().slice(0,10); var we=wEnd.toISOString().slice(0,10);
+    labelsS.push('S '+(wStart.getDate())+'/'+(wStart.getMonth()+1));
+    semanas8.push(ventas.filter(function(v){return v.fecha>=ws&&v.fecha<=we;}).reduce(function(a,v){return a+v.total;},0));
+  }
+  // Mensual: ultimos 6 meses
+  var meses6=[]; var labelsM=[];
+  var mnames=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  for(var m=5;m>=0;m--){
+    var md=new Date(); md.setDate(1); md.setMonth(md.getMonth()-m);
+    var my=md.getFullYear(); var mm=md.getMonth();
+    var ms=my+'-'+(mm+1<10?'0':'')+(mm+1);
+    labelsM.push(mnames[mm]+' '+String(my).slice(2));
+    meses6.push(ventas.filter(function(v){return v.fecha.slice(0,7)===ms;}).reduce(function(a,v){return a+v.total;},0));
+  }
+
+  var html='';
+  // Tabs de reporte
+  html+='<div class="card"><div class="sl">Reportes de ventas</div>';
+  html+='<div style="display:flex;gap:6px;margin-bottom:14px">';
+  html+='<button id="rt-dia" onclick="switchReporte(\'dia\')" style="flex:1;padding:8px;border-radius:8px;border:1px solid #8b0000;background:#8b0000;color:#fff;cursor:pointer;font-size:13px">Diario</button>';
+  html+='<button id="rt-sem" onclick="switchReporte(\'sem\')" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;cursor:pointer;font-size:13px">Semanal</button>';
+  html+='<button id="rt-mes" onclick="switchReporte(\'mes\')" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;cursor:pointer;font-size:13px">Mensual</button>';
+  html+='</div>';
+  html+='<div style="position:relative;height:220px"><canvas id="ventasChart"></canvas></div>';
+  html+='</div>';
+
+  // Filtros y lista
+  html+='<div class="card"><div class="sl">Filtros</div><div class="frow">';
   ['todos','desayuno','almuerzo','cena'].forEach(function(t){
-    html+='<button class="fb '+(filterTurno===t?'on':'')+'" onclick="setFilter(\''+t+'\')">'+(t==='todos'?'Todos':turnoLabel(t))+'</button>';
+    html+='<button class="fb '+(filterTurno===t?'on':'')+'" onclick="setFilter(\''+t+'\')">'+( t==='todos'?'Todos':turnoLabel(t))+'</button>';
   });
   html+='</div><div class="field"><label>Por fecha</label><input type="date" value="'+filterDate+'" onchange="setFilterDate(this.value)" style="max-width:200px"></div></div>';
   html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">';
@@ -640,7 +684,48 @@ function renderHistorial(){
     html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button></div></div>';
   });}
   html+='</div>';
+
   document.getElementById('historial').innerHTML=html;
+
+  // Guardar datos para switchReporte
+  window._rDia={labels:labels7,data:dias7};
+  window._rSem={labels:labelsS,data:semanas8};
+  window._rMes={labels:labelsM,data:meses6};
+  window._chartInst=null;
+  switchReporte('dia');
+}
+
+function switchReporte(tipo){
+  ['dia','sem','mes'].forEach(function(t){
+    var btn=document.getElementById('rt-'+t);
+    if(!btn)return;
+    if(t===tipo){btn.style.background='#8b0000';btn.style.color='#fff';btn.style.borderColor='#8b0000';}
+    else{btn.style.background='#fff';btn.style.color='#555';btn.style.borderColor='#ddd';}
+  });
+  var src=tipo==='dia'?window._rDia:tipo==='sem'?window._rSem:window._rMes;
+  var ctx=document.getElementById('ventasChart');
+  if(!ctx)return;
+  if(window._chartInst){window._chartInst.destroy();}
+  window._chartInst=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:src.labels,
+      datasets:[{
+        label:'Ventas S/',
+        data:src.data,
+        backgroundColor:'rgba(139,0,0,0.75)',
+        borderColor:'#8b0000',
+        borderWidth:1,
+        borderRadius:5
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return'S/ '+c.parsed.y.toFixed(2);}}}},
+      scales:{y:{beginAtZero:true,ticks:{callback:function(v){return'S/'+v;}}}}
+    }
+  });
 }
 function setFilter(t){filterTurno=t;render();}
 function setFilterDate(d){filterDate=d;render();}
@@ -953,13 +1038,3 @@ function editarPrecio(id,val){
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
