@@ -898,21 +898,8 @@ function renderSubAsistencia(emp,mes){
   var asisMes=asistencias.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
   var diasT=[];asisMes.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
   var diasF=[];asisMes.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
-  var html='<div class="card"><div class="sl">Marcar asistencia</div>';
-  html+='<div class="field"><label>Fecha</label><input type="date" id="asis-fecha" value="'+fechaFiltro+'" onchange="setAsisDate(this.value)" style="max-width:200px"></div>';
-  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="dot '+dc+'"></span><span style="font-size:13px;color:#888">'+et+'</span></div>';
-  html+='<div class="asis-btns">';
-  html+='<button class="asis-btn ab-in" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'asistio\')">Asistio</button>';
-  html+='<button class="asis-btn ab-out" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'no asistio\')">No asistio</button>';
-  html+='<button class="asis-btn ab-abs" onclick="marcarAsis(\''+emp.id+'\',\''+emp.nombre+'\',\'medio tiempo\')">Medio tiempo</button></div>';
-  if(asisEmp.length>0){
-    html+='<div style="margin-top:12px;border-top:.5px solid #f0e8d8;padding-top:10px">';
-    asisEmp.forEach(function(r){
-      var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo</span>';
-      html+='<div class="row">'+badge+'<span style="color:#aaa;font-size:12px">'+r.hora+'</span><button class="btnd" onclick="eliminarAsis(\''+r.id+'\')">x</button></div>';
-    });
-    html+='</div>';
-  }
+  var html='<div class="card"><div class="sl">Asistencia — toca un dia</div>';
+  html+='<div style="font-size:12px;color:#aaa;margin-bottom:10px">Toca cualquier dia del calendario para marcar</div>';
   html+='</div>';
   html+='<div class="card"><div class="sl">Resumen del mes</div>';
   html+='<div class="field"><label>Mes</label><input type="month" value="'+mes+'" onchange="setMes(this.value)" style="max-width:180px"></div>';
@@ -952,7 +939,10 @@ function renderSubAsistencia(emp,mes){
     var color=antesDelPago?'#bbb':(isT||isF||isMed)?'#fff':'#888';
     var border=isToday?'2px solid #8b0000':'2px solid transparent';
     var title=antesDelPago?'Ya pagado':'';
-    html+='<div title="'+title+'" style="text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+';opacity:'+(antesDelPago?'0.5':'1')+'">'+d+'</div>';
+    var clickable=!antesDelPago;
+    var cursor=clickable?'cursor:pointer;':'cursor:default;';
+    var onclick=clickable?'onclick="abrirModalAsis(\''+emp.id+'\',\''+emp.nombre+'\',\''+ds+'\')"':'';
+    html+='<div title="'+title+'" '+onclick+' style="'+cursor+'text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+';opacity:'+(antesDelPago?'0.5':'1')+'">'+d+'</div>';
   }
   html+='</div>';
   html+='<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">';
@@ -1088,6 +1078,37 @@ function eliminarPersonal(id){
   selectedEmpId=null;
   db.ref('personal/'+id).remove().then(function(){showToast('Empleado eliminado');render();});
 }
+
+function abrirModalAsis(empId, empNombre, fecha){
+  window._modalEmpId=empId;
+  window._modalEmpNombre=empNombre;
+  window._modalFecha=fecha;
+  document.getElementById('modal-titulo').textContent='Asistencia de '+empNombre;
+  document.getElementById('modal-fecha-lbl').textContent=fmtDate(fecha);
+  // Mostrar estado actual si existe
+  var regActual=asistencias.filter(function(a){return a.personalId===empId&&a.fecha===fecha;});
+  var estadoActual=regActual.length?regActual[regActual.length-1].estado:null;
+  var el=document.getElementById('modal-estado-actual');
+  if(estadoActual){
+    var color=estadoActual==='asistio'?'#185FA5':estadoActual==='medio tiempo'?'#854F0B':'#A32D2D';
+    el.innerHTML='<div style="text-align:center;font-size:12px;color:'+color+';background:#f9f5ef;border-radius:6px;padding:6px">Estado actual: <strong>'+estadoActual+'</strong></div>';
+  } else { el.innerHTML=''; }
+  var modal=document.getElementById('asis-modal');
+  modal.style.display='flex';
+}
+
+function cerrarModalAsis(){
+  document.getElementById('asis-modal').style.display='none';
+}
+
+function confirmarAsis(estado){
+  var empId=window._modalEmpId;
+  var empNombre=window._modalEmpNombre;
+  var fecha=window._modalFecha;
+  db.ref('asistencias').push({personalId:empId,nombre:empNombre,estado:estado,fecha:fecha,hora:nowTime(),timestamp:new Date().toISOString()})
+    .then(function(){showToast(empNombre+' — '+estado);cerrarModalAsis();});
+}
+
 function marcarAsis(personalId,nombre,estado){
   var fecha=document.getElementById('asis-fecha')?document.getElementById('asis-fecha').value:today();
   db.ref('asistencias').push({personalId:personalId,nombre:nombre,estado:estado,fecha:fecha,hora:nowTime(),timestamp:new Date().toISOString()})
