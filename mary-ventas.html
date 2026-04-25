@@ -327,8 +327,8 @@ function showCajeroApp(){
   document.getElementById('app').style.display='block';
   document.getElementById('user-badge').textContent='Cajero: '+(currentUser.nombre||'');
   var nav=document.querySelector('.nav');
-  nav.innerHTML='<button class="nb on" onclick="showTab(\'nueva\')">+ Venta</button>';
-  showTab('nueva');
+  nav.innerHTML='<button class="nb on" onclick="showTab(\'dashboard\')>Resumen</button><button class="nb" onclick="showTab(\'nueva\')">+ Venta</button><button class="nb" onclick="showTab(\'historial\')">Historial</button><button class="nb" onclick="showTab(\'productos\')">Productos</button>';
+  showTab('dashboard');
 }
 
 function logout(){
@@ -345,6 +345,12 @@ function showAdminApp(){
   document.getElementById('emp-app').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('user-badge').textContent='Admin';
+  var nav=document.querySelector('.nav');
+  nav.innerHTML=['<button class="nb on" onclick="showTab(\'dashboard\')">Resumen</button>',
+    '<button class="nb" onclick="showTab(\'nueva\')">+ Venta</button>',
+    '<button class="nb" onclick="showTab(\'historial\')">Historial</button>',
+    '<button class="nb" onclick="showTab(\'personal\')">Personal</button>',
+    '<button class="nb" onclick="showTab(\'productos\')">Productos</button>'].join('');
   render();
 }
 
