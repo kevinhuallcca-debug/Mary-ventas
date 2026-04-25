@@ -551,7 +551,7 @@ function guardarVenta(){
   var obs=document.getElementById('np-obs').value;
   var pago=document.getElementById('np-pago')?document.getElementById('np-pago').value:'efectivo';
   if(!prod||cant<=0||precio<=0){showToast('Completa todos los campos',true);return;}
-  db.ref('ventas').push({producto:prod.nombre,prodId:prod.id,cantidad:cant,precioUnit:precio,total:cant*precio,turno:turno,fecha:fecha,hora:nowTime(),obs:obs,timestamp:new Date().toISOString()})
+  db.ref('ventas').push({producto:prod.nombre,prodId:prod.id,cantidad:cant,precioUnit:precio,total:cant*precio,turno:turno,fecha:fecha,hora:nowTime(),obs:obs,pago:pago,timestamp:new Date().toISOString()})
     .then(function(){showToast('Venta registrada - '+fmt(cant*precio));showTab('dashboard');});
 }
 function eliminarVenta(id){
