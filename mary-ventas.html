@@ -329,8 +329,12 @@ function showCajeroApp(){
   document.getElementById('app').style.display='block';
   document.getElementById('user-badge').textContent='Cajero: '+(currentUser.nombre||'');
   var nav=document.querySelector('.nav');
-  nav.innerHTML='<button class="nb on" onclick="showTab(\'dashboard\')">Resumen</button><button class="nb" onclick="showTab(\'nueva\')">+ Venta</button><button class="nb" onclick="showTab(\'historial\')">Historial</button><button class="nb" onclick="showTab(\'productos\')">Productos</button><button class="nb" onclick="showTab(\'gastos\')">Gastos</button>';
-  showTab('dashboard');
+  nav.innerHTML=[
+    '<button class="nb" data-tab="nueva" onclick="showTab(\'nueva\')">+ Venta</button>',
+    '<button class="nb" data-tab="productos" onclick="showTab(\'productos\')">Productos</button>',
+    '<button class="nb" data-tab="gastos" onclick="showTab(\'gastos\')">Gastos</button>'
+  ].join('');
+  showTab('nueva');
 }
 
 function logout(){
