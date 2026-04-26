@@ -923,77 +923,96 @@ function subTab(t){selectedEmpSubTab=t;render();}
 function volverPersonal(){selectedEmpId=null;render();}
 
 function renderSubAsistencia(emp,mes){
-  var fechaFiltro=filterAsisDate||today();
-  var asisEmp=asistencias.filter(function(a){return a.personalId===emp.id&&a.fecha===fechaFiltro});
-  var ult=asisEmp.length?asisEmp[asisEmp.length-1]:null;
-  var dc='dot-none',et='Sin registrar';
-  if(ult){if(ult.estado==='asistio'){dc='dot-in';et='Asistio';}else if(ult.estado==='medio tiempo'){dc='dot-out';et='Medio tiempo';}else{dc='dot-abs';et='No asistio';}}
-  var asisMes=asistencias.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
-  var diasT=[];asisMes.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
-  var diasF=[];asisMes.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
-  var html='<div class="card"><div class="sl">Asistencia — toca un dia</div>';
-  html+='<div style="font-size:12px;color:#aaa;margin-bottom:10px">Toca cualquier dia del calendario para marcar</div>';
-  html+='</div>';
-  html+='<div class="card"><div class="sl">Resumen del mes</div>';
-  html+='<div class="field"><label>Mes</label><input type="month" value="'+mes+'" onchange="setMes(this.value)" style="max-width:180px"></div>';
-
-  // MINI CALENDARIO
-  // Buscar ultimo pago del empleado
+  // Ultimo pago registrado
   var pagosEmp=pagos.filter(function(p){return p.personalId===emp.id;});
-  var ultimoPago=null;
-  if(pagosEmp.length){
-    pagosEmp.sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora);});
-    ultimoPago=pagosEmp[0].fecha;
-  }
-  var calYear=parseInt(mes.slice(0,4));var calMonth=parseInt(mes.slice(5,7))-1;
-  var firstDay=new Date(calYear,calMonth,1).getDay();
-  var daysInMonth=new Date(calYear,calMonth+1,0).getDate();
-  var days=['D','L','M','M','J','V','S'];
-  html+='<div style="margin:10px 0">';
+  pagosEmp.sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  var ultimoPago=pagosEmp.length?pagosEmp[0].fecha:null;
+
+  // TODAS las asistencias del empleado (sin filtro de mes)
+  var todaAsis=asistencias.filter(function(a){return a.personalId===emp.id;});
+
+  // Solo desde el ultimo pago para conteo
+  var asisDesde=ultimoPago?todaAsis.filter(function(a){return a.fecha>ultimoPago;}):todaAsis;
+
+  // Dias unicos trabajados/faltas DESDE ultimo pago
+  var diasT=[];asisDesde.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
+  var diasF=[];asisDesde.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
+  var diasMed=asisDesde.filter(function(a){return a.estado==='medio tiempo';}).length;
+
+  // Rango de fechas para el calendario: desde fecha inicio (ultimo pago o primera asistencia) hasta hoy
+  var fechaInicio=ultimoPago||( todaAsis.length?todaAsis.slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);})[0].fecha:today());
+  var dInicio=new Date(fechaInicio+'T00:00:00');
+  var dHoy=new Date(today()+'T00:00:00');
+
+  var html='<div class="card"><div class="sl">Asistencia</div>';
   if(ultimoPago){
-    html+='<div style="background:#f0faf5;border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:12px;color:#0F6E56">';
-    html+='Contando desde último pago: <strong>'+fmtDate(ultimoPago)+'</strong></div>';
+    html+='<div style="background:#f0faf5;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:13px;color:#0F6E56">Periodo desde: <strong>'+fmtDate(ultimoPago)+'</strong> hasta hoy</div>';
+  } else {
+    html+='<div style="background:#f9f5ef;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:13px;color:#888">Mostrando todas las asistencias registradas</div>';
   }
-  html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">';
-  days.forEach(function(d){html+='<div style="text-align:center;font-size:10px;color:#aaa;font-weight:600">'+d+'</div>';});
+  html+='<div style="font-size:12px;color:#aaa;margin-bottom:10px">Toca un dia para marcar asistencia</div>';
   html+='</div>';
-  html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">';
-  for(var i=0;i<firstDay;i++){html+='<div></div>';}
-  for(var d=1;d<=daysInMonth;d++){
-    var ds=calYear+'-'+(calMonth+1<10?'0':'')+(calMonth+1)+'-'+(d<10?'0':'')+d;
-    var antesDelPago=ultimoPago&&ds<=ultimoPago;
-    var isT=!antesDelPago&&diasT.indexOf(ds)>=0;
-    var isF=!antesDelPago&&diasF.indexOf(ds)>=0;
-    var isMed=false;
-    if(!antesDelPago){asisMes.forEach(function(a){if(a.fecha===ds&&a.estado==='medio tiempo')isMed=true;});}
-    var today2=today();
-    var isToday=ds===today2;
-    var bg=antesDelPago?'#e8e4de':isT?'#185FA5':isF?'#A32D2D':isMed?'#854F0B':'#f0ede8';
-    var color=antesDelPago?'#bbb':(isT||isF||isMed)?'#fff':'#888';
-    var border=isToday?'2px solid #8b0000':'2px solid transparent';
-    var title=antesDelPago?'Ya pagado':'';
-    var clickable=!antesDelPago;
-    var cursor=clickable?'cursor:pointer;':'cursor:default;';
-    var dataAttrs=clickable?' data-empid="'+emp.id+'" data-empnombre="'+emp.nombre+'" data-fecha="'+ds+'" onclick="abrirModalAsisDt(this)"':'';
-    html+='<div title="'+title+'"'+dataAttrs+' style="'+cursor+'text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+';opacity:'+(antesDelPago?'0.5':'1')+'">'+d+'</div>';
+
+  // CALENDARIO CONTINUO — mes a mes desde inicio hasta hoy
+  var dCursor=new Date(dInicio.getFullYear(), dInicio.getMonth(), 1);
+  var dFin=new Date(dHoy.getFullYear(), dHoy.getMonth(), 1);
+  var days=['D','L','M','M','J','V','S'];
+
+  while(dCursor<=dFin){
+    var calYear=dCursor.getFullYear();
+    var calMonth=dCursor.getMonth();
+    var monthLabel=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][calMonth]+' '+calYear;
+    var firstDay=new Date(calYear,calMonth,1).getDay();
+    var daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+
+    html+='<div class="card" style="padding:12px">';
+    html+='<div style="font-size:13px;font-weight:600;color:#8b0000;margin-bottom:8px">'+monthLabel+'</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">';
+    days.forEach(function(d){html+='<div style="text-align:center;font-size:10px;color:#aaa;font-weight:600">'+d+'</div>';});
+    html+='</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">';
+    for(var i=0;i<firstDay;i++){html+='<div></div>';}
+    for(var d=1;d<=daysInMonth;d++){
+      var ds=calYear+'-'+(calMonth+1<10?'0':'')+(calMonth+1)+'-'+(d<10?'0':'')+d;
+      var antesDelPago=ultimoPago&&ds<=ultimoPago;
+      var antesDelInicio=ds<fechaInicio;
+      var regsDs=todaAsis.filter(function(a){return a.fecha===ds;});
+      var ultDs=regsDs.length?regsDs[regsDs.length-1]:null;
+      var isT=ultDs&&(ultDs.estado==='asistio');
+      var isMed=ultDs&&ultDs.estado==='medio tiempo';
+      var isF=ultDs&&ultDs.estado==='no asistio';
+      var isToday=ds===today();
+      var futura=ds>today();
+      var bg=antesDelPago||antesDelInicio?'#e8e4de':futura?'#f9f7f4':isT?'#185FA5':isMed?'#854F0B':isF?'#A32D2D':'#f0ede8';
+      var color=(antesDelPago||antesDelInicio||futura)?'#ccc':(isT||isMed||isF)?'#fff':'#888';
+      var border=isToday?'2px solid #8b0000':'2px solid transparent';
+      var clickable=!antesDelPago&&!antesDelInicio&&!futura;
+      var dataAttrs=clickable?' data-empid="'+emp.id+'" data-empnombre="'+emp.nombre+'" data-fecha="'+ds+'" onclick="abrirModalAsisDt(this)"':'';
+      var cursor=clickable?'cursor:pointer':'cursor:default';
+      html+='<div'+dataAttrs+' style="'+cursor+';text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+'">'+d+'</div>';
+    }
+    html+='</div></div>';
+    dCursor.setMonth(dCursor.getMonth()+1);
   }
-  html+='</div>';
-  html+='<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">';
+
+  // Leyenda y conteos
+  html+='<div class="card">';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">';
   html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#185FA5"></div><span style="font-size:11px;color:#555">Trabajó</span></div>';
   html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#854F0B"></div><span style="font-size:11px;color:#555">Medio tiempo</span></div>';
   html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#A32D2D"></div><span style="font-size:11px;color:#555">Faltó</span></div>';
-  html+='</div></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#e8e4de"></div><span style="font-size:11px;color:#555">Ya pagado</span></div>';
+  html+='</div>';
+  html+='<div class="row"><div class="rn">Dias trabajados</div><div class="ra">'+diasT.length+'</div></div>';
+  html+='<div class="row"><div class="rn">Medio tiempo</div><div style="font-size:14px;font-weight:600;color:#854F0B">'+diasMed+'</div></div>';
+  html+='<div class="row"><div class="rn">Faltas</div><div style="font-size:14px;font-weight:600;color:#A32D2D">'+diasF.length+'</div></div>';
+  html+='</div>';
 
-  var diasTConteo=ultimoPago?diasT.filter(function(d){return d>ultimoPago;}):diasT;
-  var diasFConteo=ultimoPago?diasF.filter(function(d){return d>ultimoPago;}):diasF;
-  var diasMedConteo=ultimoPago?asisMes.filter(function(a){return a.estado==='medio tiempo'&&a.fecha>ultimoPago;}):asisMes.filter(function(a){return a.estado==='medio tiempo';});
-  html+='<div class="row"><div class="rn">Dias trabajados</div><div class="ra">'+diasTConteo.length+'</div></div>';
-  html+='<div class="row"><div class="rn">Medio tiempo</div><div style="font-size:14px;font-weight:600;color:#854F0B">'+diasMedConteo.length+'</div></div>';
-  html+='<div class="row"><div class="rn">Faltas</div><div style="font-size:14px;font-weight:600;color:#A32D2D">'+diasFConteo.length+'</div></div></div>';
-  var histMes=asisMes.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora)});
-  html+='<div class="card"><div class="sl">Historial del mes</div>';
-  if(histMes.length===0){html+='<div class="empty">Sin registros</div>';}
-  else{histMes.forEach(function(r){
+  // Historial completo
+  var histAll=asisDesde.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora);});
+  html+='<div class="card"><div class="sl">Historial</div>';
+  if(histAll.length===0){html+='<div class="empty">Sin registros en este periodo</div>';}
+  else{histAll.forEach(function(r){
     var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo</span>';
     html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span><button class="btnd" onclick="eliminarAsis(\''+r.id+'\')">x</button></div>';
   });}
