@@ -815,15 +815,21 @@ function renderHistorial(){
   html+='<div style="flex:1;background:#f0faf5;border-radius:8px;padding:10px;text-align:center"><div style="font-size:10px;color:#0F6E56;text-transform:uppercase;letter-spacing:1px">Efectivo</div><div style="font-size:16px;font-weight:600;color:#0F6E56">'+fmt(totalEfectivo)+'</div></div>';
   html+='</div>';
   if(filtradas.length===0){html+='<div class="empty">Sin ventas</div>';}
-  else{filtradas.forEach(function(v){
-    html+='<div class="row"><div><div class="rn">'+v.producto+'<span class="badge '+turnoClass(v.turno)+'">'+turnoLabel(v.turno)+'</span></div>';
-    html+='<div class="rm">'+fmtDate(v.fecha)+' '+v.hora+' - '+v.cantidad+' x '+fmt(v.precioUnit)+(v.obs?' - '+v.obs:'');
-    html+=(v.pago==='yape'?' · <span style="color:#7b2fff;font-weight:600">Yape</span>':' · Efectivo');
-    html+='</div></div>';
-    html+='<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div>';
-    if(!currentUser||currentUser.rol!=='cajero'){html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button>';}
-    html+='</div></div>';
-  });}
+  else{
+    filtradas.forEach(function(v,idx){
+      var hidden=idx>=10?'class="venta-extra" style="display:none"':'';
+      html+='<div '+hidden+' class="row"><div><div class="rn">'+v.producto+'<span class="badge '+turnoClass(v.turno)+'">'+turnoLabel(v.turno)+'</span></div>';
+      html+='<div class="rm">'+fmtDate(v.fecha)+' '+v.hora+' - '+v.cantidad+' x '+fmt(v.precioUnit)+(v.obs?' - '+v.obs:'');
+      html+=(v.pago==='yape'?' · <span style="color:#7b2fff;font-weight:600">Yape</span>':' · Efectivo');
+      html+='</div></div>';
+      html+='<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div>';
+      if(!currentUser||currentUser.rol!=='cajero'){html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button>';}
+      html+='</div></div>';
+    });
+    if(filtradas.length>10){
+      html+='<button onclick="toggleExtras(this)" style="width:100%;margin:8px 0;padding:8px;border:0.5px solid #ddd;border-radius:8px;background:#f9f5ef;color:#555;font-size:13px;cursor:pointer">Ver todas ('+filtradas.length+') ▼</button>';
+    }
+  }
   html+='</div>';
 
   document.getElementById('historial').innerHTML=html;
@@ -930,15 +936,21 @@ function renderResumenPeriodo(tipo){
   html+='<div style="font-size:12px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Productos vendidos</div>';
   if(Object.keys(prods).length===0){html+='<div class="empty">Sin ventas</div>';}
   else{
-    Object.keys(prods).sort(function(a,b){return prods[b].cant-prods[a].cant;}).forEach(function(nom){
+    var prodKeys=Object.keys(prods).sort(function(a,b){return prods[b].cant-prods[a].cant;});
+    var showAll=false;
+    prodKeys.forEach(function(nom,idx){
       var p=prods[nom];
-      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid #f0ede8">';
+      var hidden=idx>=5?'class="prod-extra" style="display:none"':'';
+      html+='<div '+hidden+' style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid #f0ede8">';
       html+='<div><div style="font-size:14px">'+nom+'</div>';
       html+='<div style="font-size:11px;color:#aaa"><span style="color:#7b2fff">Yape '+fmt(p.yape)+'</span> · <span style="color:#0F6E56">Ef. '+fmt(p.efectivo)+'</span></div></div>';
       html+='<div style="text-align:right"><div style="font-size:15px;font-weight:600;color:#8b0000">x'+p.cant+'</div>';
       html+='<div style="font-size:12px;color:#555">'+fmt(p.total)+'</div></div>';
       html+='</div>';
     });
+    if(prodKeys.length>5){
+      html+='<button onclick="toggleExtras(this)" style="width:100%;margin-top:6px;padding:6px;border:0.5px solid #ddd;border-radius:8px;background:#f9f5ef;color:#555;font-size:13px;cursor:pointer">Ver todos ('+prodKeys.length+') ▼</button>';
+    }
   }
   html+='</div>';
 
@@ -952,11 +964,15 @@ function renderResumenPeriodo(tipo){
   html+='<div style="font-size:12px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Gastos</div>';
   if(gastosPeriodo.length===0){html+='<div class="empty" style="margin-bottom:8px">Sin gastos</div>';}
   else{
-    gastosPeriodo.forEach(function(g){
-      html+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid #f0ede8;font-size:13px">';
+    gastosPeriodo.forEach(function(g,idx){
+      var hidden=idx>=5?'class="gasto-extra" style="display:none"':'';
+      html+='<div '+hidden+' style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid #f0ede8;font-size:13px">';
       html+='<span>'+g.descripcion+'</span>';
       html+='<span style="color:#A32D2D">-'+fmt(g.monto)+'</span></div>';
     });
+    if(gastosPeriodo.length>5){
+      html+='<button onclick="toggleExtras(this)" style="width:100%;margin-top:4px;padding:6px;border:0.5px solid #ddd;border-radius:8px;background:#f9f5ef;color:#555;font-size:13px;cursor:pointer">Ver todos ('+gastosPeriodo.length+') ▼</button>';
+    }
     html+='<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;font-weight:600">';
     html+='<span>Total gastos</span><span style="color:#A32D2D">-'+fmt(totalGastos)+'</span></div>';
   }
@@ -1500,6 +1516,16 @@ function guardarApertura(){
 function eliminarApertura(id){
   if(!confirm('¿Borrar registro de apertura?'))return;
   db.ref('cajaAperturas/'+id).remove().then(function(){showToast('Registro eliminado');});
+}
+
+function toggleExtras(btn){
+  var card=btn.parentElement;
+  var extras=card.querySelectorAll('.prod-extra,.gasto-extra,.venta-extra');
+  var expanded=btn.getAttribute('data-expanded')==='1';
+  extras.forEach(function(el){el.style.display=expanded?'none':'flex';});
+  btn.setAttribute('data-expanded',expanded?'0':'1');
+  var label=btn.textContent.split('(')[1].split(')')[0];
+  btn.textContent=(expanded?'Ver todos (':'Ocultar (')+label+') '+(expanded?'▼':'▲');
 }
 
 function exportarPDF(){
