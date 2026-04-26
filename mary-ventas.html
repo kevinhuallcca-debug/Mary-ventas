@@ -422,7 +422,11 @@ function renderEmpView(empId){
   html+='</div></div>';
 
   // Mini calendario continuo igual que admin
-  var fechaInicio=ultimoPago||(todaAsis.length?todaAsis.slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);})[0].fecha:today());
+  // Empezar calendario desde: primera asistencia o mes del ultimo pago
+  var todasSorted=todaAsis.slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var primeraAsis=todasSorted.length?todasSorted[0].fecha:today();
+  var fechaInicio=ultimoPago&&ultimoPago<primeraAsis?ultimoPago:primeraAsis;
+  if(!ultimoPago&&!todaAsis.length)fechaInicio=today();
   var dCursor=new Date(fechaInicio.slice(0,4),parseInt(fechaInicio.slice(5,7))-1,1);
   var dHoyD=new Date(today().slice(0,4),parseInt(today().slice(5,7))-1,1);
   var days=['D','L','M','M','J','V','S'];
@@ -976,7 +980,10 @@ function renderSubAsistencia(emp,mes){
   var diasMed=asisDesde.filter(function(a){return a.estado==='medio tiempo';}).length;
 
   // Rango de fechas para el calendario: desde fecha inicio (ultimo pago o primera asistencia) hasta hoy
-  var fechaInicio=ultimoPago||( todaAsis.length?todaAsis.slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);})[0].fecha:today());
+  var todasSortedA=todaAsis.slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var primeraAsisA=todasSortedA.length?todasSortedA[0].fecha:today();
+  var fechaInicio=ultimoPago&&ultimoPago<primeraAsisA?ultimoPago:primeraAsisA;
+  if(!ultimoPago&&!todaAsis.length)fechaInicio=today();
   var dInicio=new Date(fechaInicio+'T00:00:00');
   var dHoy=new Date(today()+'T00:00:00');
 
