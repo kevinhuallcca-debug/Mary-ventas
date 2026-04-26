@@ -799,6 +799,7 @@ function renderHistorial(){
   html+='</div>';
   html+='<div style="position:relative;height:220px"><canvas id="ventasChart"></canvas></div>';
   html+='</div>';
+  html+='<div class="card" id="resumen-periodo"><div class="sl">Resumen del periodo</div><div class="empty">Cargando...</div></div>';
 
   // Filtros y lista
   html+='<div class="card"><div class="sl">Filtros</div><div class="frow">';
@@ -831,14 +832,14 @@ function renderHistorial(){
   var gDia7=[];
   for(var d=6;d>=0;d--){
     var dd2=new Date();dd2.setDate(dd2.getDate()-d);
-    var ds2=dd2.toISOString().slice(0,10);
+    var ds2=dd2.getFullYear()+'-'+(dd2.getMonth()+1<10?'0':'')+(dd2.getMonth()+1)+'-'+(dd2.getDate()<10?'0':'')+dd2.getDate();
     gDia7.push(gastos.filter(function(g){return g.fecha===ds2;}).reduce(function(a,g){return a+g.monto;},0));
   }
   var gSem8=[];
   for(var w=7;w>=0;w--){
     var wS2=new Date();wS2.setDate(wS2.getDate()-wS2.getDay()-w*7);
     var wE2=new Date(wS2);wE2.setDate(wS2.getDate()+6);
-    var ws2=wS2.toISOString().slice(0,10);var we2=wE2.toISOString().slice(0,10);
+    var ws2=wS2.getFullYear()+'-'+(wS2.getMonth()+1<10?'0':'')+(wS2.getMonth()+1)+'-'+(wS2.getDate()<10?'0':'')+wS2.getDate();var we2=wE2.getFullYear()+'-'+(wE2.getMonth()+1<10?'0':'')+(wE2.getMonth()+1)+'-'+(wE2.getDate()<10?'0':'')+wE2.getDate();
     gSem8.push(gastos.filter(function(g){return g.fecha>=ws2&&g.fecha<=we2;}).reduce(function(a,g){return a+g.monto;},0));
   }
   var gMes6=[];
@@ -884,6 +885,88 @@ function switchReporte(tipo){
       scales:{y:{beginAtZero:true,ticks:{callback:function(v){return v+' u';}}}}
     }
   });
+  renderResumenPeriodo(tipo);
+}
+
+function renderResumenPeriodo(tipo){
+  var el=document.getElementById('resumen-periodo');
+  if(!el)return;
+  var now=new Date();
+  var ventasPeriodo=[];var gastosPeriodo=[];
+  if(tipo==='dia'){
+    var hoyStr=today();
+    ventasPeriodo=ventas.filter(function(v){return v.fecha===hoyStr;});
+    gastosPeriodo=gastos.filter(function(g){return g.fecha===hoyStr;});
+  } else if(tipo==='sem'){
+    var wStart=new Date();wStart.setDate(wStart.getDate()-wStart.getDay());
+    var wStartStr=wStart.getFullYear()+'-'+(wStart.getMonth()+1<10?'0':'')+(wStart.getMonth()+1)+'-'+(wStart.getDate()<10?'0':'')+wStart.getDate();
+    ventasPeriodo=ventas.filter(function(v){return v.fecha>=wStartStr&&v.fecha<=today();});
+    gastosPeriodo=gastos.filter(function(g){return g.fecha>=wStartStr&&g.fecha<=today();});
+  } else {
+    var mesStr=today().slice(0,7);
+    ventasPeriodo=ventas.filter(function(v){return v.fecha.slice(0,7)===mesStr;});
+    gastosPeriodo=gastos.filter(function(g){return g.fecha.slice(0,7)===mesStr;});
+  }
+
+  // Agrupar productos
+  var prods={};
+  ventasPeriodo.forEach(function(v){
+    if(!prods[v.producto]){prods[v.producto]={cant:0,total:0,yape:0,efectivo:0};}
+    prods[v.producto].cant+=v.cantidad||1;
+    prods[v.producto].total+=v.total;
+    if(v.pago==='yape'){prods[v.producto].yape+=v.total;}
+    else{prods[v.producto].efectivo+=v.total;}
+  });
+
+  var totalVentas=ventasPeriodo.reduce(function(a,v){return a+v.total;},0);
+  var totalYape=ventasPeriodo.filter(function(v){return v.pago==='yape';}).reduce(function(a,v){return a+v.total;},0);
+  var totalEfectivo=ventasPeriodo.filter(function(v){return v.pago!=='yape';}).reduce(function(a,v){return a+v.total;},0);
+  var totalGastos=gastosPeriodo.reduce(function(a,g){return a+g.monto;},0);
+
+  var html='<div class="sl">Resumen '+{dia:'de hoy',sem:'de esta semana',mes:'de este mes'}[tipo]+'</div>';
+
+  // Productos vendidos
+  html+='<div style="margin-bottom:12px">';
+  html+='<div style="font-size:12px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Productos vendidos</div>';
+  if(Object.keys(prods).length===0){html+='<div class="empty">Sin ventas</div>';}
+  else{
+    Object.keys(prods).sort(function(a,b){return prods[b].cant-prods[a].cant;}).forEach(function(nom){
+      var p=prods[nom];
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid #f0ede8">';
+      html+='<div><div style="font-size:14px">'+nom+'</div>';
+      html+='<div style="font-size:11px;color:#aaa"><span style="color:#7b2fff">Yape '+fmt(p.yape)+'</span> · <span style="color:#0F6E56">Ef. '+fmt(p.efectivo)+'</span></div></div>';
+      html+='<div style="text-align:right"><div style="font-size:15px;font-weight:600;color:#8b0000">x'+p.cant+'</div>';
+      html+='<div style="font-size:12px;color:#555">'+fmt(p.total)+'</div></div>';
+      html+='</div>';
+    });
+  }
+  html+='</div>';
+
+  // Totales Yape / Efectivo
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+  html+='<div style="background:#f5f0ff;border-radius:8px;padding:10px;text-align:center"><div style="font-size:11px;color:#7b2fff;text-transform:uppercase">Yape</div><div style="font-size:16px;color:#7b2fff">'+fmt(totalYape)+'</div></div>';
+  html+='<div style="background:#f0faf5;border-radius:8px;padding:10px;text-align:center"><div style="font-size:11px;color:#0F6E56;text-transform:uppercase">Efectivo</div><div style="font-size:16px;color:#0F6E56">'+fmt(totalEfectivo)+'</div></div>';
+  html+='</div>';
+
+  // Gastos
+  html+='<div style="font-size:12px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Gastos</div>';
+  if(gastosPeriodo.length===0){html+='<div class="empty" style="margin-bottom:8px">Sin gastos</div>';}
+  else{
+    gastosPeriodo.forEach(function(g){
+      html+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid #f0ede8;font-size:13px">';
+      html+='<span>'+g.descripcion+'</span>';
+      html+='<span style="color:#A32D2D">-'+fmt(g.monto)+'</span></div>';
+    });
+    html+='<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;font-weight:600">';
+    html+='<span>Total gastos</span><span style="color:#A32D2D">-'+fmt(totalGastos)+'</span></div>';
+  }
+
+  // Saldo
+  html+='<div style="background:'+(totalVentas-totalGastos>=0?'#f0faf5':'#fff5f5')+';border-radius:8px;padding:10px;text-align:center;margin-top:4px">';
+  html+='<div style="font-size:12px;color:#555">Saldo (Ventas - Gastos)</div>';
+  html+='<div style="font-size:22px;color:'+(totalVentas-totalGastos>=0?'#0F6E56':'#A32D2D')+'">'+fmt(totalVentas-totalGastos)+'</div></div>';
+
+  el.innerHTML=html;
 }
 function setFilter(t){filterTurno=t;render();}
 function setFilterDate(d){filterDate=d;render();}
