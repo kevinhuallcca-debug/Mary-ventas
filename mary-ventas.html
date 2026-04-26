@@ -1055,35 +1055,61 @@ function renderSubPagos(emp,mes){
 }
 
 function renderSubLiquidacion(emp,mes){
-  var adEmp=adelantos.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes&&!a.liquidado});
-  var paEmp=pagos.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
-  var asisMes=asistencias.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
-  var diasT=[];asisMes.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
-  var diasF=[];asisMes.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
-  var totalAd=adEmp.reduce(function(a,x){return a+x.monto},0);
-  var totalPa=paEmp.reduce(function(a,x){return a+x.monto},0);
+  // Buscar ultimo pago registrado como "pagado hasta"
+  var pagosEmp=pagos.filter(function(p){return p.personalId===emp.id;});
+  pagosEmp.sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  var ultimoPago=pagosEmp.length?pagosEmp[0]:null;
+  var desdeFecha=ultimoPago?ultimoPago.fecha:null;
+
+  // Asistencias desde ultimo pago (o todo si no hay pago)
+  var asisTotal=asistencias.filter(function(a){
+    return a.personalId===emp.id&&(!desdeFecha||a.fecha>desdeFecha);
+  });
+  var diasT=[];asisTotal.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
+  var diasF=[];asisTotal.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
+  var diasMed=asisTotal.filter(function(a){return a.estado==='medio tiempo';}).length;
+
+  // Adelantos pendientes desde ultimo pago
+  var adEmp=adelantos.filter(function(a){return a.personalId===emp.id&&!a.liquidado&&(!desdeFecha||a.fecha>desdeFecha);});
+  var totalAd=adEmp.reduce(function(a,x){return a+x.monto;},0);
   var sueldo=emp.sueldo||0;
-  var saldo=sueldo-totalAd-totalPa;
+  var saldo=sueldo-totalAd;
+
   var html='<div class="card"><div class="sl">Liquidacion</div>';
-  html+='<div class="field"><label>Mes</label><input type="month" value="'+mes+'" onchange="setMes(this.value)" style="max-width:180px"></div>';
+
+  // Info desde cuando se cuenta
+  if(desdeFecha){
+    html+='<div style="background:#f0faf5;border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px;color:#0F6E56">';
+    html+='Contando desde: <strong>'+fmtDate(desdeFecha)+'</strong> (último pago)</div>';
+  } else {
+    html+='<div style="background:#f9f5ef;border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px;color:#888">';
+    html+='Mostrando todos los dias (aún sin pago registrado)</div>';
+  }
+
   html+='<div class="resumen-box">';
   html+='<div class="resumen-row"><span>Sueldo base</span><span style="color:#0F6E56">'+fmt(sueldo)+'</span></div>';
   html+='<div class="resumen-row"><span>Dias trabajados</span><span>'+diasT.length+' dias</span></div>';
+  html+='<div class="resumen-row"><span>Medio tiempo</span><span style="color:#854F0B">'+diasMed+' dias</span></div>';
   html+='<div class="resumen-row"><span>Faltas</span><span style="color:#A32D2D">'+diasF.length+' dias</span></div>';
-  html+='<div class="resumen-row"><span>Adelantos efectivo</span><span style="color:#185FA5">- '+fmt(adEmp.filter(function(a){return a.tipo==='efectivo'}).reduce(function(a,x){return a+x.monto},0))+'</span></div>';
-  html+='<div class="resumen-row"><span>Adelantos productos</span><span style="color:#993556">- '+fmt(adEmp.filter(function(a){return a.tipo==='producto'}).reduce(function(a,x){return a+x.monto},0))+'</span></div>';
-  html+='<div class="resumen-row"><span>Ya pagado</span><span style="color:#0F6E56">- '+fmt(totalPa)+'</span></div>';
+  html+='<div class="resumen-row"><span>Adelantos efectivo</span><span style="color:#185FA5">- '+fmt(adEmp.filter(function(a){return a.tipo==='efectivo';}).reduce(function(a,x){return a+x.monto;},0))+'</span></div>';
+  html+='<div class="resumen-row"><span>Adelantos productos</span><span style="color:#993556">- '+fmt(adEmp.filter(function(a){return a.tipo==='producto';}).reduce(function(a,x){return a+x.monto;},0))+'</span></div>';
   html+='<div class="resumen-row total"><span>SALDO A PAGAR</span><span style="color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</span></div></div>';
+
+  // Botón PAGADO HASTA HOY
+  html+='<button onclick="registrarPagoHasta(\''+emp.id+'\',\''+emp.nombre+'\')" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:13px;font-size:15px;width:100%;cursor:pointer;margin-top:8px">✓ Marcar como pagado hasta hoy</button>';
+
   if(adEmp.length>0){
-    html+='<button class="btn btn-g" style="margin-bottom:0" onclick="liquidarAdelantos(\''+emp.id+'\',\''+emp.nombre+'\',\''+mes+'\')">Marcar adelantos como pagados</button>';
+    html+='<button class="btn btn-g" style="margin-top:8px" onclick="liquidarAdelantos(\''+emp.id+'\',\''+emp.nombre+'\',\''+mes+'\')">Marcar adelantos como pagados</button>';
   }
-  var adLiq=adelantos.filter(function(a){return a.personalId===emp.id&&a.liquidado});
-  var mLiq={};adLiq.forEach(function(a){var m=a.fecha.slice(0,7);mLiq[m]=(mLiq[m]||0)+a.monto;});
-  var mArr=Object.keys(mLiq).sort().reverse();
-  if(mArr.length>0){
-    html+='<div class="card" style="margin-top:0"><div class="sl">Historial liquidados</div>';
-    mArr.forEach(function(m){
-      html+='<div class="row"><div class="rn">'+m+'</div><div><span class="tag-pa">Liquidado</span> <span style="font-size:13px;color:#aaa">'+fmt(mLiq[m])+'</span></div></div>';
+
+  // Historial de pagos
+  if(pagosEmp.length>0){
+    html+='<div class="card" style="margin-top:12px"><div class="sl">Historial de pagos</div>';
+    pagosEmp.forEach(function(p){
+      html+='<div class="row"><div><div class="rn">Pagado hasta '+fmtDate(p.fecha)+'</div>';
+      html+='<div class="rm">'+p.hora+(p.obs?' · '+p.obs:'')+'</div></div>';
+      html+='<div style="display:flex;align-items:center;gap:6px"><div class="ra" style="color:#0F6E56">'+fmt(p.monto||0)+'</div>';
+      html+='<button class="btnd" onclick="eliminarPagoHasta(\''+p.id+'\')">x</button></div></div>';
     });
     html+='</div>';
   }
@@ -1209,6 +1235,26 @@ function eliminarPago(id){
   if(!confirm('Eliminar este pago?'))return;
   db.ref('pagos/'+id).remove().then(function(){showToast('Pago eliminado');});
 }
+function registrarPagoHasta(personalId, nombre){
+  var obs=prompt('Observación (opcional, ej: quincena, semana):','');
+  if(obs===null)return; // canceló
+  db.ref('pagos').push({
+    personalId:personalId,
+    nombre:nombre,
+    fecha:today(),
+    hora:nowTime(),
+    monto:0,
+    obs:obs||'',
+    tipo:'pago_hasta',
+    timestamp:new Date().toISOString()
+  }).then(function(){showToast('Pagado hasta hoy — '+nombre);});
+}
+
+function eliminarPagoHasta(id){
+  if(!confirm('¿Eliminar este registro de pago?'))return;
+  db.ref('pagos/'+id).remove().then(function(){showToast('Registro eliminado');});
+}
+
 function liquidarAdelantos(personalId,nombre,mes){
   if(!confirm('Marcar todos los adelantos de '+mes+' como pagados?'))return;
   var adEmp=adelantos.filter(function(a){return a.personalId===personalId&&a.fecha.slice(0,7)===mes&&!a.liquidado});
