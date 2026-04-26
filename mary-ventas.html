@@ -236,7 +236,7 @@ var defaultProductos=[
   {nombre:'Porcion de pollo',precio:12,turno:'almuerzo'}
 ];
 
-function today(){return new Date().toISOString().split('T')[0]}
+function today(){var n=new Date();return n.getFullYear()+'-'+(n.getMonth()+1<10?'0':'')+(n.getMonth()+1)+'-'+(n.getDate()<10?'0':'')+n.getDate()}
 function mesActual(){return today().slice(0,7)}
 function fmtDate(d){var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
 function fmt(n){return'S/ '+parseFloat(n).toFixed(2)}
