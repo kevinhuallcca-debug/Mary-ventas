@@ -384,45 +384,88 @@ function showEmpApp(emp){
 function renderEmpView(empId){
   var emp=null;for(var i=0;i<personal.length;i++){if(personal[i].id===empId){emp=personal[i];break;}}
   if(!emp)return;
-  var mes=getMes();
-  var adEmp=adelantos.filter(function(a){return a.personalId===empId&&a.fecha.slice(0,7)===mes&&!a.liquidado});
-  var paEmp=pagos.filter(function(a){return a.personalId===empId&&a.fecha.slice(0,7)===mes});
-  var asisMes=asistencias.filter(function(a){return a.personalId===empId&&a.fecha.slice(0,7)===mes});
-  var diasT=[];asisMes.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
-  var diasF=[];asisMes.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
-  var totalAd=adEmp.reduce(function(a,x){return a+x.monto},0);
-  var totalPa=paEmp.reduce(function(a,x){return a+x.monto},0);
-  var saldo=(emp.sueldo||0)-totalAd-totalPa;
+
+  // Ultimo pago
+  var pagosEmp=pagos.filter(function(p){return p.personalId===empId;});
+  pagosEmp.sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  var ultimoPago=pagosEmp.length?pagosEmp[0].fecha:null;
+
+  // Todas las asistencias
+  var todaAsis=asistencias.filter(function(a){return a.personalId===empId;});
+  var asisDesde=ultimoPago?todaAsis.filter(function(a){return a.fecha>ultimoPago;}):todaAsis;
+
+  var diasT=[];asisDesde.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
+  var diasF=[];asisDesde.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
+  var diasMed=asisDesde.filter(function(a){return a.estado==='medio tiempo';}).length;
+
+  var adEmp=adelantos.filter(function(a){return a.personalId===empId&&!a.liquidado&&(!ultimoPago||a.fecha>ultimoPago);});
+  var totalAd=adEmp.reduce(function(a,x){return a+x.monto;},0);
+  var saldo=(emp.sueldo||0)-totalAd;
 
   var html='<div class="emp-view">';
   html+='<div class="emp-profile-header">';
   html+='<div class="emp-profile-avatar">'+initials(emp.nombre)+'</div>';
   html+='<div class="emp-profile-name">'+emp.nombre+'</div>';
   html+='<div class="emp-profile-cargo">'+emp.cargo+'</div></div>';
+  html+='<div style="padding:0 1rem"><div class="readonly-note" style="margin:0 0 1rem">Vista de solo lectura</div></div>';
 
-  html+='<div style="padding:0 1rem"><div class="readonly-note" style="margin:0 0 1rem">Vista de solo lectura — contacta al administrador para cambios</div></div>';
-
-  // Selector de mes
-  html+='<div class="card"><div class="sl">Mes</div>';
-  html+='<input type="month" value="'+mes+'" onchange="setMesEmp(this.value,\''+empId+'\')" style="border:1px solid #e0d5c5;border-radius:8px;padding:7px 11px;font-size:14px;font-family:inherit;color:#1a1a1a">';
-  html+='</div>';
-
-  // Resumen
-  html+='<div class="card"><div class="sl">Mi resumen del mes</div>';
+  // Resumen desde ultimo pago
+  html+='<div class="card"><div class="sl">Mi resumen</div>';
+  if(ultimoPago){html+='<div style="font-size:12px;color:#0F6E56;margin-bottom:8px">Desde: '+fmtDate(ultimoPago)+'</div>';}
   html+='<div class="resumen-box">';
   html+='<div class="resumen-row"><span>Sueldo base</span><span style="color:#0F6E56">'+fmt(emp.sueldo||0)+'</span></div>';
   html+='<div class="resumen-row"><span>Dias trabajados</span><span>'+diasT.length+' dias</span></div>';
+  html+='<div class="resumen-row"><span>Medio tiempo</span><span style="color:#854F0B">'+diasMed+' dias</span></div>';
   html+='<div class="resumen-row"><span>Faltas</span><span style="color:#A32D2D">'+diasF.length+' dias</span></div>';
-  html+='<div class="resumen-row"><span>Total adelantos</span><span style="color:#854F0B">- '+fmt(totalAd)+'</span></div>';
-  html+='<div class="resumen-row"><span>Ya pagado</span><span style="color:#0F6E56">- '+fmt(totalPa)+'</span></div>';
+  html+='<div class="resumen-row"><span>Adelantos</span><span style="color:#854F0B">- '+fmt(totalAd)+'</span></div>';
   html+='<div class="resumen-row total"><span>Saldo a cobrar</span><span style="color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</span></div>';
   html+='</div></div>';
 
-  // Asistencia
-  html+='<div class="card"><div class="sl">Mi asistencia este mes</div>';
-  if(asisMes.length===0){html+='<div class="empty">Sin registros este mes</div>';}
+  // Mini calendario continuo igual que admin
+  var fechaInicio=ultimoPago||(todaAsis.length?todaAsis.slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);})[0].fecha:today());
+  var dCursor=new Date(fechaInicio.slice(0,4),parseInt(fechaInicio.slice(5,7))-1,1);
+  var dHoyD=new Date(today().slice(0,4),parseInt(today().slice(5,7))-1,1);
+  var days=['D','L','M','M','J','V','S'];
+  var mnames=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  while(dCursor<=dHoyD){
+    var calYear=dCursor.getFullYear();var calMonth=dCursor.getMonth();
+    var firstDay=new Date(calYear,calMonth,1).getDay();
+    var daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+    html+='<div class="card" style="padding:12px"><div style="font-size:13px;font-weight:600;color:#8b0000;margin-bottom:8px">'+mnames[calMonth]+' '+calYear+'</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">';
+    days.forEach(function(d){html+='<div style="text-align:center;font-size:10px;color:#aaa;font-weight:600">'+d+'</div>';});
+    html+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">';
+    for(var i=0;i<firstDay;i++){html+='<div></div>';}
+    for(var d=1;d<=daysInMonth;d++){
+      var ds=calYear+'-'+(calMonth+1<10?'0':'')+(calMonth+1)+'-'+(d<10?'0':'')+d;
+      var antesDelPago=ultimoPago&&ds<=ultimoPago;
+      var futura=ds>today();
+      var regsDs=todaAsis.filter(function(a){return a.fecha===ds;});
+      var ultDs=regsDs.length?regsDs[regsDs.length-1]:null;
+      var isT=ultDs&&ultDs.estado==='asistio';
+      var isMed=ultDs&&ultDs.estado==='medio tiempo';
+      var isF=ultDs&&ultDs.estado==='no asistio';
+      var isToday=ds===today();
+      var bg=antesDelPago?'#e8e4de':futura?'#f9f7f4':isT?'#185FA5':isMed?'#854F0B':isF?'#A32D2D':'#f0ede8';
+      var color=(antesDelPago||futura)?'#ccc':(isT||isMed||isF)?'#fff':'#888';
+      var border=isToday?'2px solid #8b0000':'2px solid transparent';
+      html+='<div style="text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+'">'+d+'</div>';
+    }
+    html+='</div></div>';
+    dCursor.setMonth(dCursor.getMonth()+1);
+  }
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;padding:0 1rem 8px">';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#185FA5"></div><span style="font-size:11px;color:#555">Trabajó</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#854F0B"></div><span style="font-size:11px;color:#555">Medio tiempo</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#A32D2D"></div><span style="font-size:11px;color:#555">Faltó</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#e8e4de"></div><span style="font-size:11px;color:#555">Ya pagado</span></div>';
+  html+='</div>';
+
+  // Historial
+  html+='<div class="card"><div class="sl">Mi asistencia</div>';
+  if(asisDesde.length===0){html+='<div class="empty">Sin registros en este periodo</div>';}
   else{
-    var histSorted=asisMes.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora)});
+    var histSorted=asisDesde.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora);});
     histSorted.forEach(function(r){
       var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo</span>';
       html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span></div>';
@@ -911,11 +954,11 @@ function renderEmpDetail(){
   html+='</div>';
   html+='<nav class="sub-nav"><button class="snb '+(selectedEmpSubTab==='asistencia'?'on':'')+'" onclick="subTab(\'asistencia\')">Asistencia</button>';
   html+='<button class="snb '+(selectedEmpSubTab==='adelantos'?'on':'')+'" onclick="subTab(\'adelantos\')">Adelantos</button>';
-  html+='<button class="snb '+(selectedEmpSubTab==='pagos'?'on':'')+'" onclick="subTab(\'pagos\')">Pagos</button>';
+
   html+='<button class="snb '+(selectedEmpSubTab==='liquidacion'?'on':'')+'" onclick="subTab(\'liquidacion\')">Liquidacion</button></nav>';
   if(selectedEmpSubTab==='asistencia')html+=renderSubAsistencia(emp,mes);
   else if(selectedEmpSubTab==='adelantos')html+=renderSubAdelantos(emp,mes);
-  else if(selectedEmpSubTab==='pagos')html+=renderSubPagos(emp,mes);
+
   else if(selectedEmpSubTab==='liquidacion')html+=renderSubLiquidacion(emp,mes);
   document.getElementById('personal').innerHTML=html;
 }
