@@ -1234,23 +1234,31 @@ function cerrarModalAsis(){
   document.getElementById('asis-modal').style.display='none';
 }
 
+function guardarAsisUnica(personalId, nombre, estado, fecha){
+  // Buscar si ya existe registro para ese dia y empleado
+  var existentes=asistencias.filter(function(a){return a.personalId===personalId&&a.fecha===fecha;});
+  var promises=existentes.map(function(a){return db.ref('asistencias/'+a.id).remove();});
+  Promise.all(promises).then(function(){
+    db.ref('asistencias').push({personalId:personalId,nombre:nombre,estado:estado,fecha:fecha,hora:nowTime(),timestamp:new Date().toISOString()})
+      .then(function(){showToast(nombre+' — '+estado);});
+  });
+}
+
 function confirmarAsis(estado){
   var empId=window._modalEmpId;
   var empNombre=window._modalEmpNombre;
   var fecha=window._modalFecha;
-  db.ref('asistencias').push({personalId:empId,nombre:empNombre,estado:estado,fecha:fecha,hora:nowTime(),timestamp:new Date().toISOString()})
-    .then(function(){showToast(empNombre+' — '+estado);cerrarModalAsis();});
+  guardarAsisUnica(empId,empNombre,estado,fecha);
+  cerrarModalAsis();
 }
 
 function marcarAsisDirecto(personalId, nombre, estado){
-  db.ref('asistencias').push({personalId:personalId,nombre:nombre,estado:estado,fecha:today(),hora:nowTime(),timestamp:new Date().toISOString()})
-    .then(function(){showToast(nombre+' — '+estado);});
+  guardarAsisUnica(personalId,nombre,estado,today());
 }
 
 function marcarAsis(personalId,nombre,estado){
   var fecha=document.getElementById('asis-fecha')?document.getElementById('asis-fecha').value:today();
-  db.ref('asistencias').push({personalId:personalId,nombre:nombre,estado:estado,fecha:fecha,hora:nowTime(),timestamp:new Date().toISOString()})
-    .then(function(){showToast(nombre+' - '+estado);});
+  guardarAsisUnica(personalId,nombre,estado,fecha);
 }
 function eliminarAsis(id){db.ref('asistencias/'+id).remove().then(function(){showToast('Registro eliminado');});}
 function setAsisDate(d){filterAsisDate=d;render();}
