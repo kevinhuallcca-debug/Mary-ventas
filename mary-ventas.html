@@ -484,14 +484,7 @@ function renderEmpView(empId){
   });}
   html+='</div>';
 
-  // Pagos
-  html+='<div class="card"><div class="sl">Mis pagos este mes</div>';
-  if(paEmp.length===0){html+='<div class="empty">Sin pagos registrados este mes</div>';}
-  else{paEmp.forEach(function(p){
-    html+='<div class="row"><div><span class="tag-pa">Pago</span><div class="rm" style="margin-top:3px">'+fmtDate(p.fecha)+(p.nota?' · '+p.nota:'')+'</div></div>';
-    html+='<div class="ra">'+fmt(p.monto)+'</div></div>';
-  });}
-  html+='</div>';
+
   html+='</div>';
   document.getElementById('emp-content').innerHTML=html;
 }
