@@ -767,7 +767,7 @@ function renderHistorial(){
     var ds=dd.toISOString().slice(0,10);
     var lbl=dd.toLocaleDateString('es-PE',{weekday:'short',day:'numeric'});
     labels7.push(lbl);
-    dias7.push(ventas.filter(function(v){return v.fecha===ds;}).reduce(function(a,v){return a+v.total;},0));
+    dias7.push(ventas.filter(function(v){return v.fecha===ds;}).reduce(function(a,v){return a+(v.cantidad||1);},0));
   }
   // Semanal: ultimas 8 semanas
   var semanas8=[]; var labelsS=[];
@@ -776,7 +776,7 @@ function renderHistorial(){
     var wEnd=new Date(wStart); wEnd.setDate(wStart.getDate()+6);
     var ws=wStart.toISOString().slice(0,10); var we=wEnd.toISOString().slice(0,10);
     labelsS.push('S '+(wStart.getDate())+'/'+(wStart.getMonth()+1));
-    semanas8.push(ventas.filter(function(v){return v.fecha>=ws&&v.fecha<=we;}).reduce(function(a,v){return a+v.total;},0));
+    semanas8.push(ventas.filter(function(v){return v.fecha>=ws&&v.fecha<=we;}).reduce(function(a,v){return a+(v.cantidad||1);},0));
   }
   // Mensual: ultimos 6 meses
   var meses6=[]; var labelsM=[];
@@ -786,7 +786,7 @@ function renderHistorial(){
     var my=md.getFullYear(); var mm=md.getMonth();
     var ms=my+'-'+(mm+1<10?'0':'')+(mm+1);
     labelsM.push(mnames[mm]+' '+String(my).slice(2));
-    meses6.push(ventas.filter(function(v){return v.fecha.slice(0,7)===ms;}).reduce(function(a,v){return a+v.total;},0));
+    meses6.push(ventas.filter(function(v){return v.fecha.slice(0,7)===ms;}).reduce(function(a,v){return a+(v.cantidad||1);},0));
   }
 
   var html='';
@@ -873,15 +873,15 @@ function switchReporte(tipo){
     data:{
       labels:src.labels,
       datasets:[
-        {label:'Ventas S/',data:src.data,backgroundColor:'rgba(139,0,0,0.75)',borderColor:'#8b0000',borderWidth:1,borderRadius:5},
+        {label:'Productos vendidos',data:src.data,backgroundColor:'rgba(139,0,0,0.75)',borderColor:'#8b0000',borderWidth:1,borderRadius:5},
         {label:'Gastos S/',data:srcG,backgroundColor:'rgba(163,45,45,0.35)',borderColor:'#A32D2D',borderWidth:1,borderRadius:5}
       ]
     },
     options:{
       responsive:true,
       maintainAspectRatio:false,
-      plugins:{legend:{display:true,position:'top'},tooltip:{callbacks:{label:function(c){return c.dataset.label+': S/ '+c.parsed.y.toFixed(2);}}}},
-      scales:{y:{beginAtZero:true,ticks:{callback:function(v){return'S/'+v;}}}}
+      plugins:{legend:{display:true,position:'top'},tooltip:{callbacks:{label:function(c){var isGasto=c.dataset.label.indexOf('Gasto')>=0;return isGasto?'Gastos: S/ '+c.parsed.y.toFixed(2):c.dataset.label+': '+c.parsed.y+' unidades';}}}},
+      scales:{y:{beginAtZero:true,ticks:{callback:function(v){return v+' u';}}}}
     }
   });
 }
