@@ -764,7 +764,7 @@ function renderHistorial(){
   var dias7=[]; var labels7=[];
   for(var d=6;d>=0;d--){
     var dd=new Date(); dd.setDate(dd.getDate()-d);
-    var ds=dd.toISOString().slice(0,10);
+    var ds=dd.getFullYear()+'-'+(dd.getMonth()+1<10?'0':'')+(dd.getMonth()+1)+'-'+(dd.getDate()<10?'0':'')+dd.getDate();
     var lbl=dd.toLocaleDateString('es-PE',{weekday:'short',day:'numeric'});
     labels7.push(lbl);
     dias7.push(ventas.filter(function(v){return v.fecha===ds;}).reduce(function(a,v){return a+(v.cantidad||1);},0));
@@ -774,7 +774,7 @@ function renderHistorial(){
   for(var w=7;w>=0;w--){
     var wStart=new Date(); wStart.setDate(wStart.getDate()-wStart.getDay()-w*7);
     var wEnd=new Date(wStart); wEnd.setDate(wStart.getDate()+6);
-    var ws=wStart.toISOString().slice(0,10); var we=wEnd.toISOString().slice(0,10);
+    var ws=wStart.getFullYear()+'-'+(wStart.getMonth()+1<10?'0':'')+(wStart.getMonth()+1)+'-'+(wStart.getDate()<10?'0':'')+wStart.getDate(); var we=wEnd.getFullYear()+'-'+(wEnd.getMonth()+1<10?'0':'')+(wEnd.getMonth()+1)+'-'+(wEnd.getDate()<10?'0':'')+wEnd.getDate();
     labelsS.push('S '+(wStart.getDate())+'/'+(wStart.getMonth()+1));
     semanas8.push(ventas.filter(function(v){return v.fecha>=ws&&v.fecha<=we;}).reduce(function(a,v){return a+(v.cantidad||1);},0));
   }
