@@ -986,7 +986,7 @@ function renderSubAsistencia(emp,mes){
       var bg=antesDelPago||antesDelInicio?'#e8e4de':futura?'#f9f7f4':isT?'#185FA5':isMed?'#854F0B':isF?'#A32D2D':'#f0ede8';
       var color=(antesDelPago||antesDelInicio||futura)?'#ccc':(isT||isMed||isF)?'#fff':'#888';
       var border=isToday?'2px solid #8b0000':'2px solid transparent';
-      var clickable=!antesDelPago&&!antesDelInicio&&!futura;
+      var clickable=!antesDelPago&&!futura;
       var dataAttrs=clickable?' data-empid="'+emp.id+'" data-empnombre="'+emp.nombre+'" data-fecha="'+ds+'" onclick="abrirModalAsisDt(this)"':'';
       var cursor=clickable?'cursor:pointer':'cursor:default';
       html+='<div'+dataAttrs+' style="'+cursor+';text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+'">'+d+'</div>';
@@ -1115,7 +1115,12 @@ function renderSubLiquidacion(emp,mes){
   html+='<div class="resumen-row total"><span>SALDO A PAGAR</span><span style="color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</span></div></div>';
 
   // Botón PAGADO HASTA HOY
-  html+='<button onclick="registrarPagoHasta(\''+emp.id+'\',\''+emp.nombre+'\')" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:13px;font-size:15px;width:100%;cursor:pointer;margin-top:8px">✓ Marcar como pagado hasta hoy</button>';
+  html+='<div style="margin-top:12px;background:#f9f5ef;border-radius:10px;padding:12px">';
+  html+='<div style="font-size:13px;font-weight:600;color:#555;margin-bottom:8px">Registrar pago</div>';
+  html+='<div style="margin-bottom:8px"><label style="font-size:12px;color:#888;display:block;margin-bottom:4px">Pagado hasta que fecha</label>';
+  html+='<input type="date" id="fecha-pago-'+emp.id+'" value="'+today()+'" style="width:100%;border:1px solid #e0d5c5;border-radius:8px;padding:10px;font-size:15px;font-family:inherit"></div>';
+  html+='<button onclick="registrarPagoHasta(\''+emp.id+'\',\''+emp.nombre+'\',\'fecha-pago-'+emp.id+'\')" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;width:100%;cursor:pointer">✓ Marcar como pagado</button>';
+  html+='</div>';
 
   if(adEmp.length>0){
     html+='<button class="btn btn-g" style="margin-top:8px" onclick="liquidarAdelantos(\''+emp.id+'\',\''+emp.nombre+'\',\''+mes+'\')">Marcar adelantos como pagados</button>';
@@ -1254,19 +1259,20 @@ function eliminarPago(id){
   if(!confirm('Eliminar este pago?'))return;
   db.ref('pagos/'+id).remove().then(function(){showToast('Pago eliminado');});
 }
-function registrarPagoHasta(personalId, nombre){
-  var obs=prompt('Observación (opcional, ej: quincena, semana):','');
-  if(obs===null)return; // canceló
+function registrarPagoHasta(personalId, nombre, inputId){
+  var el=document.getElementById(inputId);
+  var fecha=el?el.value:today();
+  if(!fecha){showToast('Elige una fecha');return;}
+  if(!confirm('¿Marcar como pagado hasta el '+fmtDate(fecha)+'?'))return;
   db.ref('pagos').push({
     personalId:personalId,
     nombre:nombre,
-    fecha:today(),
+    fecha:fecha,
     hora:nowTime(),
     monto:0,
-    obs:obs||'',
     tipo:'pago_hasta',
     timestamp:new Date().toISOString()
-  }).then(function(){showToast('Pagado hasta hoy — '+nombre);});
+  }).then(function(){showToast('Pagado hasta '+fmtDate(fecha)+' — '+nombre);});
 }
 
 function eliminarPagoHasta(id){
