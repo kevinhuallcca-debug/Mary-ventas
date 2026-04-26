@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mary — Sistema</title>
+<title>Mary — Jr. Ramón Castilla, Huancané</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-weight:600!important}
@@ -345,6 +345,73 @@ function showCajeroApp(){
     '<button class="nb" data-tab="gastos" onclick="showTab(\'gastos\')">Gastos</button>'
   ].join('');
   showTab('dashboard');
+}
+
+function _unused_showLocalScreen(){
+  document.getElementById('loader').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='none';
+  document.getElementById('emp-app').style.display='none';
+  var ls=document.getElementById('local-screen');
+  ls.style.display='flex';
+  // Show admin controls only for admin
+  document.getElementById('admin-local-controls').style.display=currentUser&&currentUser.rol==='admin'?'block':'none';
+  renderLocalesList();
+}
+
+function renderLocalesList(){
+  var el=document.getElementById('locales-list');
+  if(!el)return;
+  var html='';
+  if(locales.length===0){
+    html='<div style="text-align:center;color:#aaa;padding:16px;font-size:14px">No hay locales aún.<br>Agrega uno abajo.</div>';
+  } else {
+    locales.forEach(function(l){
+      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+      html+='<button onclick="seleccionarLocal(\''+l.id+'\',\''+l.nombre+'\')" style="flex:1;background:#f9f5ef;border:1.5px solid #e0d5c5;border-radius:10px;padding:14px;font-size:16px;cursor:pointer;text-align:left;font-family:inherit">';
+      html+='<span style="font-size:18px">🏪</span> <strong>'+l.nombre+'</strong></button>';
+      if(currentUser&&currentUser.rol==='admin'){
+        html+='<button onclick="eliminarLocal(\''+l.id+'\',\''+l.nombre+'\')" style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:8px;cursor:pointer;color:#aaa;font-size:16px">✕</button>';
+      }
+      html+='</div>';
+    });
+  }
+  el.innerHTML=html;
+}
+
+function agregarLocal(){
+  var nombre=document.getElementById('nuevo-local-nombre').value.trim();
+  if(!nombre){showToast('Escribe el nombre del local');return;}
+  db.ref('locales').push({nombre:nombre,timestamp:new Date().toISOString()})
+    .then(function(){
+      document.getElementById('nuevo-local-nombre').value='';
+      showToast('Local "'+nombre+'" creado');
+      renderLocalesList();
+    });
+}
+
+function eliminarLocal(id,nombre){
+  if(!confirm('¿Eliminar el local "'+nombre+'"? Se borrarán todos sus datos.'))return;
+  db.ref('locales/'+id).remove().then(function(){
+    showToast('Local eliminado');
+    renderLocalesList();
+  });
+}
+
+function seleccionarLocal(id,nombre){
+  currentLocal={id:id,nombre:nombre};
+  startListeners();
+  document.getElementById('local-screen').style.display='none';
+  if(currentUser.rol==='admin'){
+    showAdminApp();
+  } else if(currentUser.rol==='cajero'){
+    showCajeroApp();
+  } else {
+    // empleado
+    var emp=null;
+    for(var i=0;i<personal.length;i++){if(personal[i].id===currentUser.personalId){emp=personal[i];break;}}
+    if(emp)showEmpApp(emp);
+  }
 }
 
 function logout(){
