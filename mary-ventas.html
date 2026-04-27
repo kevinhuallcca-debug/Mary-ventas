@@ -952,6 +952,7 @@ function renderNueva(){
 }
 
 function renderPOS(){
+  try{
   var wrap=document.getElementById('pos-wrap');
   if(!wrap)return;
 
@@ -1095,6 +1096,7 @@ function renderPOS(){
   html+='</div>';
 
   wrap.innerHTML=html;
+  }catch(e){document.getElementById('pos-wrap').innerHTML='<div style="padding:20px;color:red">ERROR: '+e.message+'</div>';console.error(e);}
 }
 
 // POS helpers
