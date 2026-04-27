@@ -658,10 +658,12 @@ function renderEmpView(empId){
       var isMed=ultDs&&ultDs.estado==='medio tiempo';
       var isF=ultDs&&ultDs.estado==='no asistio';
       var isToday=ds===today();
-      var bg=antesDelPago?'#e8e4de':futura?'#f9f7f4':isT?'#185FA5':isMed?'#854F0B':isF?'#A32D2D':'#f0ede8';
-      var color=(antesDelPago||futura)?'#ccc':(isT||isMed||isF)?'#fff':'#888';
+      var bg=antesDelPago?(isT?'#2d6a4f':isMed?'#52b788':isF?'#95d5b2':'#e8e4de'):futura?'#f9f7f4':isT?'#185FA5':isMed?'#854F0B':isF?'#A32D2D':'#f0ede8';
+      var color=antesDelPago?(isT||isMed||isF?'#fff':'#ccc'):futura?'#ccc':(isT||isMed||isF)?'#fff':'#888';
       var border=isToday?'2px solid #8b0000':'2px solid transparent';
-      html+='<div style="text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+'">'+d+'</div>';
+      var labelDs=ultDs?(ultDs.estado==='asistio'?'✅ Asistió':ultDs.estado==='medio tiempo'?'🟡 Medio tiempo':ultDs.estado==='no asistio'?'❌ No asistió':''):'Sin registro';
+      var titleDs=(antesDelPago?'[Cancelado] ':'')+labelDs;
+      html+='<div title="'+titleDs+'" style="text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+';cursor:default">'+d+'</div>';
     }
     html+='</div></div>';
     dCursor.setMonth(dCursor.getMonth()+1);
@@ -1699,13 +1701,15 @@ function renderSubAsistencia(emp,mes){
       var isF=ultDs&&ultDs.estado==='no asistio';
       var isToday=ds===today();
       var futura=ds>today();
-      var bg=antesDelPago||antesDelInicio?'#e8e4de':futura?'#f9f7f4':isT?'#185FA5':isMed?'#854F0B':isF?'#A32D2D':'#f0ede8';
-      var color=(antesDelPago||antesDelInicio||futura)?'#ccc':(isT||isMed||isF)?'#fff':'#888';
+      var bg=(antesDelPago||antesDelInicio)?(isT?'#2d6a4f':isMed?'#52b788':isF?'#95d5b2':'#e8e4de'):futura?'#f9f7f4':isT?'#185FA5':isMed?'#854F0B':isF?'#A32D2D':'#f0ede8';
+      var color=(antesDelPago||antesDelInicio)?(isT||isMed||isF?'#fff':'#ccc'):futura?'#ccc':(isT||isMed||isF)?'#fff':'#888';
       var border=isToday?'2px solid #8b0000':'2px solid transparent';
       var clickable=!antesDelPago&&!futura;
       var dataAttrs=clickable?' data-empid="'+emp.id+'" data-empnombre="'+emp.nombre+'" data-fecha="'+ds+'" onclick="abrirModalAsisDt(this)"':'';
       var cursor=clickable?'cursor:pointer':'cursor:default';
-      html+='<div'+dataAttrs+' style="'+cursor+';text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+'">'+d+'</div>';
+      var labelDsAdmin=ultDs?(ultDs.estado==='asistio'?'✅ Asistió':ultDs.estado==='medio tiempo'?'🟡 Medio tiempo':ultDs.estado==='no asistio'?'❌ No asistió':''):'Sin registro';
+      var titleDsAdmin=((antesDelPago||antesDelInicio)?'[Cancelado] ':'')+labelDsAdmin;
+      html+='<div'+dataAttrs+' title="'+titleDsAdmin+'" style="'+cursor+';text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+'">'+d+'</div>';
     }
     html+='</div></div>';
     dCursor.setMonth(dCursor.getMonth()+1);
