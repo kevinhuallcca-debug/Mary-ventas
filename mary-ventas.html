@@ -937,344 +937,316 @@ function renderDashboard(){
   document.getElementById('dashboard').innerHTML=html;
 }
 
-// Carrito temporal de items
+// ── POS VARIABLES ─────────────────────────────────────────────
 var carritoItems=[];
-var modoVenta='rapido'; // 'rapido' o 'mesas'
-var mesas={}; // sincronizado con Firebase en tiempo real
+var modoVenta='rapido';
+var mesas={};
 var mesaActiva=null;
+var posCategoria='todas';
+var posBusqueda='';
 
 function renderNueva(){
-  var html='';
-  // Selector de modo
-  html+='<div class="card" style="padding:10px">';
-  html+='<div style="display:flex;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid #8b0000">';
-  html+='<button onclick="setModoVenta(\'rapido\')" style="flex:1;padding:11px;border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;background:'+(modoVenta==='rapido'?'#8b0000':'#fff')+';color:'+(modoVenta==='rapido'?'#fff':'#8b0000')+'">⚡ Venta rápida</button>';
-  html+='<button onclick="setModoVenta(\'mesas\')" style="flex:1;padding:11px;border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;background:'+(modoVenta==='mesas'?'#8b0000':'#fff')+';color:'+(modoVenta==='mesas'?'#fff':'#8b0000')+'">🪑 Mesas</button>';
-  html+='</div></div>';
-  document.getElementById('nueva').innerHTML=html;
-  if(modoVenta==='rapido') renderModoRapido();
-  else renderModoMesas();
+  var cont=document.getElementById('nueva');
+  // Layout POS: dos columnas
+  cont.innerHTML='<div id="pos-wrap" style="display:flex;gap:0;height:calc(100vh - 130px);overflow:hidden"></div>';
+  renderPOS();
 }
 
-function setModoVenta(modo){
-  modoVenta=modo;
-  mesaActiva=null;
-  renderNueva();
-}
+function renderPOS(){
+  var wrap=document.getElementById('pos-wrap');
+  if(!wrap)return;
 
-function getTurnoAuto(){
-  var h=new Date().getHours();
-  return h<12?'desayuno':h<17?'almuerzo':'cena';
-}
+  // Categorias unicas
+  var cats=['todas'];
+  productos.forEach(function(p){if(p.turno&&cats.indexOf(p.turno)<0)cats.push(p.turno);});
 
-function renderFormProducto(onAdd){
-  var turno=document.getElementById('np-turno')?document.getElementById('np-turno').value:getTurnoAuto();
-  var del_turno=productos.filter(function(p){return p.turno===turno;});
-  var otros=productos.filter(function(p){return p.turno!==turno;});
-  var opts='<option value="">-- Elige producto --</option>';
-  if(del_turno.length){opts+='<optgroup label="'+turnoLabel(turno)+'">';del_turno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});opts+='</optgroup>';}
-  if(otros.length){opts+='<optgroup label="Otros">';otros.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});opts+='</optgroup>';}
-  var html='';
-  html+='<div style="display:flex;gap:8px;align-items:flex-end">';
-  html+='<div class="field" style="flex:2;margin:0"><label>Producto</label><select id="np-prod" onchange="actualizarPrecioCarrito()">'+opts+'</select></div>';
-  html+='<div class="field" style="width:65px;margin:0"><label>Cant.</label><input type="number" id="np-cant" value="1" min="1" style="text-align:center"></div>';
-  html+='<div class="field" style="width:80px;margin:0"><label>Precio</label><input type="number" id="np-precio" step="0.5"></div>';
-  html+='<button onclick="'+onAdd+'" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:22px;margin-bottom:1px;flex-shrink:0">+</button>';
-  html+='</div>';
-  return html;
-}
+  // Productos filtrados
+  var filtrados=productos.filter(function(p){
+    var matchCat=posCategoria==='todas'||p.turno===posCategoria;
+    var matchBus=!posBusqueda||p.nombre.toLowerCase().indexOf(posBusqueda.toLowerCase())>=0;
+    return matchCat&&matchBus;
+  });
 
-// ── MODO RAPIDO ───────────────────────────────────────────────
-function renderModoRapido(){
+  // Carrito (mesa activa o rapido)
+  var carrito=modoVenta==='mesas'&&mesaActiva&&mesas[mesaActiva]
+    ?(Array.isArray(mesas[mesaActiva].items)?mesas[mesaActiva].items:(mesas[mesaActiva].items?Object.values(mesas[mesaActiva].items):[]))
+    :carritoItems;
+  var total=carrito.reduce(function(a,it){return a+it.subtotal;},0);
+
   var turnoAuto=getTurnoAuto();
-  var cont=document.getElementById('nueva');
-  var html=cont.innerHTML;
-  html+='<div class="card"><div class="sl">Detalles</div>';
-  html+='<div class="g2"><div class="field"><label>Turno</label><select id="np-turno" onchange="actualizarOptsProducto()"><option value="desayuno"'+(turnoAuto==='desayuno'?' selected':'')+'>🌅 Desayuno</option><option value="almuerzo"'+(turnoAuto==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option><option value="cena"'+(turnoAuto==='cena'?' selected':'')+'>🌙 Cena</option><option value="otro">📦 Otro</option></select></div>';
-  html+='<div class="field"><label>Fecha</label><input type="date" id="np-fecha" value="'+today()+'"></div></div>';
-  html+='<div class="g2"><div class="field"><label>Pago</label><select id="np-pago"><option value="efectivo">💵 Efectivo</option><option value="yape">💜 Yape</option></select></div>';
-  html+='<div class="field"><label>Observación</label><input type="text" id="np-obs" placeholder="Ej: para llevar..."></div></div></div>';
-  html+='<div class="card"><div class="sl">Productos</div>';
-  html+=renderFormProducto('agregarAlCarrito()');
-  html+='<div id="carrito-lista" style="margin-top:12px"></div></div>';
-  html+='<div style="padding:0 0 1rem">';
-  html+='<div id="carrito-total-box" style="display:none;background:#f0faf5;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center"><span style="font-size:13px;color:#555">Total: </span><span id="carrito-total-txt" style="font-size:22px;font-weight:700;color:#0F6E56"></span></div>';
-  html+='<button class="btn" onclick="guardarVenta()" style="font-size:16px;padding:14px">✓ Registrar venta</button></div>';
-  cont.innerHTML=html;
-  carritoItems=[];
-  actualizarOptsProducto();
-}
+  var mesaActObj=modoVenta==='mesas'&&mesaActiva?mesas[mesaActiva]:null;
 
-// ── MODO MESAS ────────────────────────────────────────────────
-function renderModoMesas(){
-  var cont=document.getElementById('nueva');
-  var html=cont.innerHTML;
-  var mesaIds=Object.keys(mesas);
-  html+='<div class="card"><div class="sl">Mesas abiertas</div>';
-  if(mesaIds.length===0){
-    html+='<div style="text-align:center;color:#bbb;padding:16px;font-size:13px">Sin mesas abiertas</div>';
-  } else {
-    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">';
-    mesaIds.forEach(function(mid){
+  var html='';
+
+  // ── COLUMNA IZQUIERDA: productos ──
+  html+='<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid #f0e8d8">';
+
+  // Barra superior: modo + turno
+  html+='<div style="padding:10px 12px;border-bottom:1px solid #f0e8d8;display:flex;gap:8px;align-items:center;flex-shrink:0">';
+  html+='<div style="display:flex;border-radius:8px;overflow:hidden;border:1.5px solid #8b0000;flex-shrink:0">';
+  html+='<button onclick="setPosMode(\'rapido\')" style="padding:7px 12px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(modoVenta==='rapido'?'#8b0000':'#fff')+';color:'+(modoVenta==='rapido'?'#fff':'#8b0000')+'">⚡ Rápido</button>';
+  html+='<button onclick="setPosMode(\'mesas\')" style="padding:7px 12px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(modoVenta==='mesas'?'#8b0000':'#fff')+';color:'+(modoVenta==='mesas'?'#fff':'#8b0000')+'">🪑 Mesas</button>';
+  html+='</div>';
+  // Turno selector
+  html+='<select id="pos-turno" onchange="posTurnoChange()" style="border:1px solid #e0d5c5;border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit;flex-shrink:0">';
+  html+='<option value="desayuno"'+(turnoAuto==='desayuno'?' selected':'')+'>🌅 Desayuno</option>';
+  html+='<option value="almuerzo"'+(turnoAuto==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option>';
+  html+='<option value="cena"'+(turnoAuto==='cena'?' selected':'')+'>🌙 Cena</option>';
+  html+='<option value="otro">📦 Otro</option>';
+  html+='</select>';
+  // Busqueda
+  html+='<input type="text" id="pos-busqueda" placeholder="Buscar producto..." value="'+posBusqueda+'" oninput="posBuscar(this.value)" style="flex:1;border:1px solid #e0d5c5;border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit">';
+  html+='</div>';
+
+  // Categorias
+  html+='<div style="display:flex;gap:6px;padding:8px 12px;overflow-x:auto;flex-shrink:0;border-bottom:1px solid #f0e8d8">';
+  cats.forEach(function(c){
+    var label=c==='todas'?'Todas':turnoLabel(c);
+    html+='<button onclick="posSetCat(\''+c+'\')" style="white-space:nowrap;padding:5px 14px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(posCategoria===c?'#8b0000':'#f0e8d8')+';color:'+(posCategoria===c?'#fff':'#555')+'">'+label+'</button>';
+  });
+  html+='</div>';
+
+  // Grid de productos
+  html+='<div style="flex:1;overflow-y:auto;padding:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-content:start">';
+  if(filtrados.length===0){
+    html+='<div style="grid-column:1/-1;text-align:center;color:#bbb;padding:30px;font-size:13px">Sin productos</div>';
+  }
+  filtrados.forEach(function(p){
+    html+='<button onclick="posAgregarProducto(\''+p.id+'\')" style="background:#fff;border:1.5px solid #e0d5c5;border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-family:inherit;transition:background 0.1s">';
+    html+='<div style="font-size:13px;font-weight:700;color:#333;margin-bottom:4px;line-height:1.2">'+p.nombre+'</div>';
+    html+='<div style="font-size:15px;font-weight:700;color:#8b0000">'+fmt(p.precio)+'</div>';
+    html+='<div style="font-size:10px;color:#aaa;margin-top:2px">'+turnoLabel(p.turno||'otro')+'</div>';
+    html+='</button>';
+  });
+  html+='</div></div>';
+
+  // ── COLUMNA DERECHA: carrito ──
+  html+='<div style="width:260px;display:flex;flex-direction:column;background:#fdf8f0;flex-shrink:0">';
+
+  // Header carrito
+  html+='<div style="padding:10px 12px;border-bottom:1px solid #f0e8d8;flex-shrink:0">';
+  if(modoVenta==='mesas'){
+    // Selector de mesa
+    html+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">';
+    var mesaIds=['mesa_1','mesa_2','mesa_3','mesa_4','mesa_5','mesa_6','mesa_7','mesa_8','mesa_9'];
+    mesaIds.forEach(function(mid,i){
       var m=mesas[mid];
-      var mitems=Array.isArray(m.items)?m.items:[];
-      var tot=mitems.reduce(function(a,it){return a+it.subtotal;},0);
-      var nitems=mitems.reduce(function(a,it){return a+it.cantidad;},0);
-      html+='<button onclick="abrirMesa(\''+mid+'\')" style="background:'+(mesaActiva===mid?'#8b0000':'#f9f5ef')+';color:'+(mesaActiva===mid?'#fff':'#333')+';border:1.5px solid '+(mesaActiva===mid?'#8b0000':'#e0d5c5')+';border-radius:12px;padding:12px 8px;cursor:pointer;text-align:center;font-family:inherit">';
-      html+='<div style="font-size:16px;font-weight:700">'+m.nombre+'</div>';
-      html+='<div style="font-size:11px;opacity:0.8">'+nitems+' items</div>';
-      html+='<div style="font-size:14px;font-weight:600;margin-top:4px">'+fmt(tot)+'</div>';
-      html+='</button>';
+      var mitems=m?(Array.isArray(m.items)?m.items:(m.items?Object.values(m.items):[])): [];
+      var tieneItems=mitems.filter(function(it){return !it.cobrado;}).length>0;
+      html+='<button onclick="posSelMesa(\''+mid+'\')" style="width:40px;height:40px;border-radius:8px;border:2px solid '+(mesaActiva===mid?'#8b0000':tieneItems?'#0F6E56':'#e0d5c5')+';background:'+(mesaActiva===mid?'#8b0000':tieneItems?'#f0faf5':'#fff')+';color:'+(mesaActiva===mid?'#fff':tieneItems?'#0F6E56':'#888')+';font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">'+(i+1)+'</button>';
     });
     html+='</div>';
-  }
-  // Agregar nueva mesa
-  html+='<div style="display:flex;gap:8px">';
-  html+='<input type="text" id="nueva-mesa-nom" placeholder="Ej: Mesa 1, Mesa 2..." style="flex:1;border:1px solid #e0d5c5;border-radius:8px;padding:10px;font-size:14px;font-family:inherit">';
-  html+='<button onclick="crearMesa()" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:10px 16px;cursor:pointer;font-size:14px">Abrir mesa</button>';
-  html+='</div></div>';
-  // Panel de mesa activa
-  if(mesaActiva&&mesas[mesaActiva]){
-    var m=mesas[mesaActiva];
-    var mitems=Array.isArray(m.items)?m.items:[];
-    var tot=mitems.reduce(function(a,it){return a+it.subtotal;},0);
-    html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
-    html+='<div class="sl" style="margin:0">'+m.nombre+'</div>';
-    html+='<button onclick="cerrarMesaSinPagar()" style="background:none;border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:#aaa">Cancelar</button></div>';
-    if(m.ultimoEditor){html+='<div style="font-size:11px;color:#aaa;margin-bottom:8px">Último cambio por: <strong>'+m.ultimoEditor+'</strong></div>';}
-    if(m.creadoPor){html+='<div style="font-size:11px;color:#aaa;margin-bottom:8px">Creada por: <strong>'+m.creadoPor+'</strong></div>';}
-    // Config turno/pago para esta mesa
-    var turnoAuto=getTurnoAuto();
-    html+='<div class="g2"><div class="field"><label>Turno</label><select id="np-turno" onchange="actualizarOptsProducto()"><option value="desayuno"'+(m.turno==='desayuno'?' selected':'')+'>🌅 Desayuno</option><option value="almuerzo"'+(m.turno==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option><option value="cena"'+(m.turno==='cena'?' selected':'')+'>🌙 Cena</option><option value="otro"'+(m.turno==='otro'?' selected':'')+'>📦 Otro</option></select></div>';
-    html+='<div class="field"><label>Pago</label><select id="np-pago"><option value="efectivo"'+(m.pago==='efectivo'?' selected':'')+'>💵 Efectivo</option><option value="yape"'+(m.pago==='yape'?' selected':'')+'>💜 Yape</option></select></div></div>';
-    // Form agregar producto
-    html+=renderFormProducto('agregarAMesa()');
-    // Lista items de la mesa
-    html+='<div style="margin-top:12px">';
-    if(mitems.length===0){
-      html+='<div style="text-align:center;color:#bbb;font-size:13px;padding:12px">Sin productos aún</div>';
+    if(mesaActiva){
+      html+='<div style="font-size:13px;font-weight:700;color:#8b0000">Mesa '+(mesaActiva.replace('mesa_',''))+' '+( mesaActObj&&mesaActObj.ultimoEditor?'· '+mesaActObj.ultimoEditor:'')+'</div>';
     } else {
-      mitems.forEach(function(it,idx){
-        html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #f0e8d8">';
-        html+='<div style="flex:1"><div style="font-size:14px;font-weight:600">'+it.nombre+'</div>';
-        html+='<div style="font-size:12px;color:#aaa">'+it.cantidad+' × '+fmt(it.precioUnit)+'</div></div>';
-        html+='<div style="font-size:15px;font-weight:700;color:#0F6E56;min-width:55px;text-align:right">'+fmt(it.subtotal)+'</div>';
-        html+='<div style="display:flex;gap:4px">';
-        html+='<button onclick="cambiarCantMesa('+idx+',-1)" style="width:28px;height:28px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer">−</button>';
-        html+='<span style="min-width:22px;text-align:center;font-size:14px;line-height:28px">'+it.cantidad+'</span>';
-        html+='<button onclick="cambiarCantMesa('+idx+',1)" style="width:28px;height:28px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer">+</button>';
-        html+='<button onclick="quitarItemMesa('+idx+')" style="width:28px;height:28px;border-radius:6px;border:1px solid #fdd;background:#fff;cursor:pointer;color:#cc3333">✕</button>';
-        html+='</div></div>';
-      });
+      html+='<div style="font-size:12px;color:#aaa">Toca una mesa para editarla</div>';
     }
-    html+='</div>';
-    // Total y cobrar
-    html+='<div style="margin-top:14px;background:#f0faf5;border-radius:10px;padding:14px;text-align:center">';
-    html+='<div style="font-size:13px;color:#555">Total '+m.nombre+'</div>';
-    html+='<div style="font-size:28px;font-weight:700;color:#0F6E56">'+fmt(tot)+'</div></div>';
-    if(mitems.length>0){html+='<button onclick="cobrarMesa()" style="width:100%;margin-top:10px;background:#0F6E56;color:#fff;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:700;cursor:pointer">💰 Cobrar '+m.nombre+'</button>';}
-    html+='</div>';
+  } else {
+    html+='<div style="font-size:14px;font-weight:700;color:#333">🛒 Pedido</div>';
   }
-  cont.innerHTML=html;
-  actualizarOptsProducto();
+  html+='</div>';
+
+  // Lista carrito
+  html+='<div style="flex:1;overflow-y:auto;padding:8px">';
+  if(carrito.length===0){
+    html+='<div style="text-align:center;color:#ccc;padding:30px 10px;font-size:13px">'+(modoVenta==='mesas'&&!mesaActiva?'Selecciona una mesa':'Agrega productos')+'</div>';
+  } else {
+    carrito.forEach(function(it,idx){
+      if(it.cobrado)return;
+      html+='<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:0.5px solid #f0e8d8">';
+      html+='<div style="flex:1"><div style="font-size:12px;font-weight:600;color:#333">'+it.nombre+'</div>';
+      html+='<div style="font-size:11px;color:#aaa">'+fmt(it.precioUnit)+' c/u</div></div>';
+      html+='<div style="display:flex;align-items:center;gap:3px">';
+      html+='<button onclick="posCambiarCant('+idx+',-1)" style="width:24px;height:24px;border-radius:5px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:14px">−</button>';
+      html+='<span style="min-width:20px;text-align:center;font-size:13px;font-weight:600">'+it.cantidad+'</span>';
+      html+='<button onclick="posCambiarCant('+idx+',1)" style="width:24px;height:24px;border-radius:5px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:14px">+</button>';
+      html+='</div>';
+      html+='<div style="min-width:48px;text-align:right;font-size:13px;font-weight:700;color:#0F6E56">'+fmt(it.subtotal)+'</div>';
+      html+='<button onclick="posQuitarItem('+idx+')" style="width:22px;height:22px;border-radius:5px;border:none;background:none;cursor:pointer;color:#ddd;font-size:14px">✕</button>';
+      html+='</div>';
+    });
+  }
+  html+='</div>';
+
+  // Footer: pago + total + botón
+  html+='<div style="padding:10px 12px;border-top:1px solid #f0e8d8;flex-shrink:0">';
+  html+='<div style="display:flex;gap:6px;margin-bottom:8px">';
+  var pagoVal=(modoVenta==='mesas'&&mesaActObj)?mesaActObj.pago||'efectivo':'efectivo';
+  html+='<button id="btn-ef" onclick="posSetPago(\'efectivo\')" style="flex:1;padding:7px;border-radius:8px;border:2px solid '+(pagoVal==='efectivo'?'#8b0000':'#e0d5c5')+';background:'+(pagoVal==='efectivo'?'#8b0000':'#fff')+';color:'+(pagoVal==='efectivo'?'#fff':'#888')+';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">💵 Efectivo</button>';
+  html+='<button id="btn-yp" onclick="posSetPago(\'yape\')" style="flex:1;padding:7px;border-radius:8px;border:2px solid '+(pagoVal==='yape'?'#8b0000':'#e0d5c5')+';background:'+(pagoVal==='yape'?'#8b0000':'#fff')+';color:'+(pagoVal==='yape'?'#fff':'#888')+';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">💜 Yape</button>';
+  html+='</div>';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+  html+='<span style="font-size:12px;color:#888">TOTAL</span>';
+  html+='<span style="font-size:24px;font-weight:700;color:#8b0000">'+fmt(total)+'</span>';
+  html+='</div>';
+  if(carrito.length>0){
+    html+='<button onclick="posRegistrar()" style="width:100%;background:#8b0000;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">✓ GENERAR VENTA</button>';
+    if(modoVenta==='mesas'&&mesaActiva){
+      html+='<button onclick="posCobrarParcial()" style="width:100%;background:#854F0B;color:#fff;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px">💳 Cobro parcial</button>';
+      html+='<button onclick="cerrarMesaSinPagar()" style="width:100%;background:none;border:1px solid #ddd;border-radius:8px;padding:7px;font-size:11px;cursor:pointer;color:#aaa;font-family:inherit;margin-top:4px">Cancelar mesa</button>';
+    }
+  }
+  html+='</div>';
+  html+='</div>';
+
+  wrap.innerHTML=html;
 }
 
-function crearMesa(){
-  var nom=document.getElementById('nueva-mesa-nom').value.trim();
-  if(!nom){showToast('Escribe el nombre de la mesa',true);return;}
-  var id='mesa_'+Date.now();
-  var turnoAuto=getTurnoAuto();
-  var nueva={nombre:nom,items:[],turno:turnoAuto,pago:'efectivo',creadoPor:currentUser?currentUser.nombre:'',timestamp:Date.now()};
-  db.ref('mesas/'+id).set(nueva).then(function(){
-    mesaActiva=id;
-    renderNueva();
-  });
+// POS helpers
+var posPago='efectivo';
+
+function setPosMode(m){modoVenta=m;mesaActiva=null;carritoItems=[];renderPOS();}
+function posSetCat(c){posCategoria=c;renderPOS();}
+function posBuscar(v){posBusqueda=v;renderPOS();}
+function posTurnoChange(){renderPOS();}
+
+function posSelMesa(mid){
+  mesaActiva=mid;
+  if(!mesas[mid]){
+    var turnoEl=document.getElementById('pos-turno');
+    var t=turnoEl?turnoEl.value:getTurnoAuto();
+    db.ref('mesas/'+mid).set({nombre:'Mesa '+(mid.replace('mesa_','')),items:[],turno:t,pago:'efectivo',creadoPor:currentUser?currentUser.nombre:'',timestamp:Date.now()});
+  }
+  renderPOS();
 }
 
-function abrirMesa(id){
-  mesaActiva=id;
-  renderNueva();
+function posSetPago(p){
+  posPago=p;
+  if(modoVenta==='mesas'&&mesaActiva){
+    db.ref('mesas/'+mesaActiva).update({pago:p});
+  }
+  renderPOS();
 }
 
-function agregarAMesa(){
-  if(!mesaActiva||!mesas[mesaActiva]){return;}
-  var sel=document.getElementById('np-prod');
-  if(!sel||!sel.value){showToast('Selecciona un producto',true);return;}
-  var prod=null;for(var i=0;i<productos.length;i++){if(productos[i].id===sel.value){prod=productos[i];break;}}
-  if(!prod){return;}
-  var cant=parseFloat(document.getElementById('np-cant').value)||1;
-  var precio=parseFloat(document.getElementById('np-precio').value)||0;
-  if(cant<=0||precio<=0){showToast('Cantidad y precio deben ser mayores a 0',true);return;}
-  var turno=document.getElementById('np-turno').value;
-  var pago=document.getElementById('np-pago').value;
-  var items=(mesas[mesaActiva].items||[]).slice();
-  var existe=items.findIndex(function(it){return it.prodId===prod.id&&it.precioUnit===precio;});
-  if(existe>=0){items[existe].cantidad+=cant;items[existe].subtotal=items[existe].cantidad*precio;}
-  else{items.push({prodId:prod.id,nombre:prod.nombre,cantidad:cant,precioUnit:precio,subtotal:cant*precio});}
-  // Guardar en Firebase — se sincroniza a todos
-  db.ref('mesas/'+mesaActiva).update({items:items,turno:turno,pago:pago,ultimoEditor:currentUser?currentUser.nombre:''});
-  // Limpiar form
-  document.getElementById('np-prod').value='';
-  document.getElementById('np-cant').value='1';
-  document.getElementById('np-precio').value='';
+function posAgregarProducto(prodId){
+  var prod=productos.find(function(p){return p.id===prodId;});
+  if(!prod)return;
+  if(modoVenta==='mesas'){
+    if(!mesaActiva){showToast('Selecciona una mesa primero',true);return;}
+    var m=mesas[mesaActiva]||{items:[]};
+    var items=Array.isArray(m.items)?m.items.slice():(m.items?Object.values(m.items):[]);
+    var existe=items.findIndex(function(it){return it.prodId===prod.id&&it.precioUnit===prod.precio&&!it.cobrado;});
+    if(existe>=0){items[existe].cantidad++;items[existe].subtotal=items[existe].cantidad*items[existe].precioUnit;}
+    else{items.push({prodId:prod.id,nombre:prod.nombre,cantidad:1,precioUnit:prod.precio,subtotal:prod.precio});}
+    var turnoEl=document.getElementById('pos-turno');
+    db.ref('mesas/'+mesaActiva).update({items:items,turno:turnoEl?turnoEl.value:getTurnoAuto(),ultimoEditor:currentUser?currentUser.nombre:''});
+  } else {
+    var existe2=carritoItems.findIndex(function(it){return it.prodId===prod.id&&it.precioUnit===prod.precio;});
+    if(existe2>=0){carritoItems[existe2].cantidad++;carritoItems[existe2].subtotal=carritoItems[existe2].cantidad*carritoItems[existe2].precioUnit;}
+    else{carritoItems.push({prodId:prod.id,nombre:prod.nombre,cantidad:1,precioUnit:prod.precio,subtotal:prod.precio});}
+    renderPOS();
+  }
 }
 
-function cambiarCantMesa(idx,delta){
-  if(!mesaActiva||!mesas[mesaActiva])return;
-  var items=(mesas[mesaActiva].items||[]).slice();
-  if(!items[idx])return;
-  items[idx].cantidad+=delta;
-  if(items[idx].cantidad<=0){items.splice(idx,1);}
-  else{items[idx].subtotal=items[idx].cantidad*items[idx].precioUnit;}
-  db.ref('mesas/'+mesaActiva).update({items:items,ultimoEditor:currentUser?currentUser.nombre:''});
+function posCambiarCant(idx,delta){
+  if(modoVenta==='mesas'&&mesaActiva){
+    var m=mesas[mesaActiva];
+    var items=Array.isArray(m.items)?m.items.slice():(m.items?Object.values(m.items):[]);
+    var pend=items.filter(function(it){return !it.cobrado;});
+    if(!pend[idx])return;
+    var realIdx=items.indexOf(pend[idx]);
+    items[realIdx].cantidad+=delta;
+    if(items[realIdx].cantidad<=0)items.splice(realIdx,1);
+    else items[realIdx].subtotal=items[realIdx].cantidad*items[realIdx].precioUnit;
+    db.ref('mesas/'+mesaActiva).update({items:items,ultimoEditor:currentUser?currentUser.nombre:''});
+  } else {
+    carritoItems[idx].cantidad+=delta;
+    if(carritoItems[idx].cantidad<=0)carritoItems.splice(idx,1);
+    else carritoItems[idx].subtotal=carritoItems[idx].cantidad*carritoItems[idx].precioUnit;
+    renderPOS();
+  }
 }
 
-function quitarItemMesa(idx){
-  if(!mesaActiva||!mesas[mesaActiva])return;
-  var items=(mesas[mesaActiva].items||[]).slice();
-  items.splice(idx,1);
-  db.ref('mesas/'+mesaActiva).update({items:items,ultimoEditor:currentUser?currentUser.nombre:''});
+function posQuitarItem(idx){
+  if(modoVenta==='mesas'&&mesaActiva){
+    var m=mesas[mesaActiva];
+    var items=Array.isArray(m.items)?m.items.slice():(m.items?Object.values(m.items):[]);
+    var pend=items.filter(function(it){return !it.cobrado;});
+    if(!pend[idx])return;
+    var realIdx=items.indexOf(pend[idx]);
+    items.splice(realIdx,1);
+    db.ref('mesas/'+mesaActiva).update({items:items,ultimoEditor:currentUser?currentUser.nombre:''});
+  } else {
+    carritoItems.splice(idx,1);
+    renderPOS();
+  }
 }
 
-function cerrarMesaSinPagar(){
-  if(!confirm('¿Cancelar esta mesa? Se perderán los productos agregados.'))return;
-  db.ref('mesas/'+mesaActiva).remove().then(function(){
-    mesaActiva=null;
-    renderNueva();
-  });
+function posRegistrar(){
+  var turnoEl=document.getElementById('pos-turno');
+  var turno=turnoEl?turnoEl.value:getTurnoAuto();
+  var fecha=today();var hora=nowTime();var ts=new Date().toISOString();
+  if(modoVenta==='mesas'&&mesaActiva){
+    var m=mesas[mesaActiva];
+    var mitems=Array.isArray(m.items)?m.items:(m.items?Object.values(m.items):[]);
+    var pend=mitems.filter(function(it){return !it.cobrado;});
+    if(pend.length===0){showToast('Sin productos pendientes',true);return;}
+    var pago=m.pago||posPago;
+    var total=pend.reduce(function(a,it){return a+it.subtotal;},0);
+    var obs='Mesa '+(mesaActiva.replace('mesa_',''));
+    Promise.all(pend.map(function(it){
+      return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts});
+    })).then(function(){
+      return db.ref('mesas/'+mesaActiva).remove();
+    }).then(function(){
+      showToast('✓ Mesa cobrada — '+fmt(total));
+      mesaActiva=null;renderPOS();
+    });
+  } else {
+    if(carritoItems.length===0){showToast('Agrega productos',true);return;}
+    var total2=carritoItems.reduce(function(a,it){return a+it.subtotal;},0);
+    Promise.all(carritoItems.map(function(it){
+      return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turno,fecha:fecha,hora:hora,obs:'',pago:posPago,timestamp:ts});
+    })).then(function(){
+      showToast('✓ Venta registrada — '+fmt(total2));
+      carritoItems=[];renderPOS();
+    });
+  }
 }
 
-function cobrarMesa(){
+function posCobrarParcial(){
   if(!mesaActiva||!mesas[mesaActiva])return;
   var m=mesas[mesaActiva];
-  var mitems2=Array.isArray(m.items)?m.items:(m.items?Object.values(m.items):[]);
-  if(mitems2.length===0){showToast('Agrega al menos un producto',true);return;}
-  // Leer turno y pago del formulario si existen
-  var turnoEl=document.getElementById('np-turno');
-  var pagoEl=document.getElementById('np-pago');
-  var turno=turnoEl?turnoEl.value:m.turno;
-  var pago=pagoEl?pagoEl.value:m.pago;
-  var fecha=today();
-  var hora=nowTime();
-  var ts=new Date().toISOString();
-  var total=mitems2.reduce(function(a,it){return a+it.subtotal;},0);
-  var obs=m.nombre;
-  var promesas=mitems2.map(function(it){
+  var mitems=Array.isArray(m.items)?m.items:(m.items?Object.values(m.items):[]);
+  var pend=mitems.filter(function(it){return !it.cobrado;});
+  if(pend.length===0){showToast('Sin productos pendientes',true);return;}
+  // Mostrar popup para elegir cuantos cobrar
+  var msg='¿Cuántos productos cobrar ahora?\n\n';
+  pend.forEach(function(it,i){msg+=(i+1)+'. '+it.nombre+' x'+it.cantidad+' = '+fmt(it.subtotal)+'\n';});
+  msg+='\nEscribe los números separados por coma (ej: 1,3)';
+  var resp=prompt(msg);
+  if(!resp)return;
+  var indices=resp.split(',').map(function(x){return parseInt(x.trim())-1;}).filter(function(i){return i>=0&&i<pend.length;});
+  if(indices.length===0){showToast('Índices inválidos',true);return;}
+  var turnoEl=document.getElementById('pos-turno');
+  var turno=turnoEl?turnoEl.value:getTurnoAuto();
+  var fecha=today();var hora=nowTime();var ts=new Date().toISOString();
+  var pago=m.pago||posPago;
+  var obs='Mesa '+(mesaActiva.replace('mesa_',''))+' (parcial)';
+  var selItems=indices.map(function(i){return pend[i];});
+  var totalParcial=selItems.reduce(function(a,it){return a+it.subtotal;},0);
+  Promise.all(selItems.map(function(it){
     return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts});
+  })).then(function(){
+    // Marcar como cobrados
+    var newItems=mitems.map(function(it){
+      if(selItems.indexOf(it)>=0)return Object.assign({},it,{cobrado:true});
+      return it;
+    });
+    var quedanPend=newItems.filter(function(it){return !it.cobrado;});
+    if(quedanPend.length===0){
+      return db.ref('mesas/'+mesaActiva).remove().then(function(){
+        showToast('✓ Mesa completamente cobrada — '+fmt(totalParcial));
+        mesaActiva=null;renderPOS();
+      });
+    }
+    return db.ref('mesas/'+mesaActiva).update({items:newItems}).then(function(){
+      showToast('✓ Cobro parcial — '+fmt(totalParcial));
+      renderPOS();
+    });
   });
-  Promise.all(promesas).then(function(){
-    // Borrar mesa de Firebase
-    return db.ref('mesas/'+mesaActiva).remove();
-  }).then(function(){
-    showToast('✓ '+m.nombre+' cobrada — '+fmt(total));
-    mesaActiva=null;
-    renderNueva();
-  });
 }
 
-function actualizarOptsProducto(){
-  var sel=document.getElementById('np-prod');if(!sel)return;
-  var turno=document.getElementById('np-turno')?document.getElementById('np-turno').value:'';
-  // Mostrar todos los productos pero primero los del turno seleccionado
-  var del_turno=productos.filter(function(p){return p.turno===turno;});
-  var otros=productos.filter(function(p){return p.turno!==turno;});
-  var opts='<option value="">-- Elige producto --</option>';
-  if(del_turno.length){
-    opts+='<optgroup label="'+turnoLabel(turno)+'">';
-    del_turno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});
-    opts+='</optgroup>';
-  }
-  if(otros.length){
-    opts+='<optgroup label="Otros">';
-    otros.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});
-    opts+='</optgroup>';
-  }
-  sel.innerHTML=opts;
-  actualizarPrecioCarrito();
-}
-
-function actualizarPrecioCarrito(){
-  var sel=document.getElementById('np-prod');if(!sel)return;
-  var opt=sel.options[sel.selectedIndex];
-  if(opt&&opt.dataset.precio){
-    document.getElementById('np-precio').value=opt.dataset.precio;
-  }
-  calcTotalCarrito();
-}
-
-function calcTotalCarrito(){
-  var cant=parseFloat(document.getElementById('np-cant').value)||0;
-  var precio=parseFloat(document.getElementById('np-precio').value)||0;
-}
-
-function agregarAlCarrito(){
-  var sel=document.getElementById('np-prod');
-  if(!sel||!sel.value){showToast('Selecciona un producto',true);return;}
-  var prod=null;for(var i=0;i<productos.length;i++){if(productos[i].id===sel.value){prod=productos[i];break;}}
-  if(!prod){showToast('Selecciona un producto',true);return;}
-  var cant=parseFloat(document.getElementById('np-cant').value)||1;
-  var precio=parseFloat(document.getElementById('np-precio').value)||0;
-  if(cant<=0||precio<=0){showToast('Cantidad y precio deben ser mayores a 0',true);return;}
-  // Si ya existe el mismo producto con mismo precio, sumar cantidad
-  var existe=carritoItems.findIndex(function(it){return it.prodId===prod.id&&it.precioUnit===precio;});
-  if(existe>=0){
-    carritoItems[existe].cantidad+=cant;
-    carritoItems[existe].subtotal=carritoItems[existe].cantidad*precio;
-  } else {
-    carritoItems.push({prodId:prod.id,nombre:prod.nombre,cantidad:cant,precioUnit:precio,subtotal:cant*precio});
-  }
-  // Reset selector
-  document.getElementById('np-prod').value='';
-  document.getElementById('np-cant').value='1';
-  document.getElementById('np-precio').value='';
-  renderCarrito();
-}
-
-function renderCarrito(){
-  var lista=document.getElementById('carrito-lista');
-  var totalBox=document.getElementById('carrito-total-box');
-  var totalTxt=document.getElementById('carrito-total-txt');
-  if(!lista)return;
-  if(carritoItems.length===0){
-    lista.innerHTML='<div style="text-align:center;color:#bbb;font-size:13px;padding:12px">Agrega productos arriba ↑</div>';
-    if(totalBox)totalBox.style.display='none';
-    return;
-  }
-  var total=carritoItems.reduce(function(a,it){return a+it.subtotal;},0);
-  var html='';
-  carritoItems.forEach(function(it,idx){
-    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #f0e8d8">';
-    html+='<div style="flex:1">';
-    html+='<div style="font-size:14px;font-weight:600">'+it.nombre+'</div>';
-    html+='<div style="font-size:12px;color:#aaa">'+it.cantidad+' × '+fmt(it.precioUnit)+'</div></div>';
-    html+='<div style="font-size:15px;font-weight:700;color:#0F6E56;min-width:60px;text-align:right">'+fmt(it.subtotal)+'</div>';
-    // Botones cantidad
-    html+='<div style="display:flex;align-items:center;gap:4px">';
-    html+='<button onclick="cambiarCant('+idx+',-1)" style="width:28px;height:28px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:16px">−</button>';
-    html+='<span style="min-width:24px;text-align:center;font-size:14px">'+it.cantidad+'</span>';
-    html+='<button onclick="cambiarCant('+idx+',1)" style="width:28px;height:28px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:16px">+</button>';
-    html+='<button onclick="quitarItem('+idx+')" style="width:28px;height:28px;border-radius:6px;border:1px solid #fdd;background:#fff;cursor:pointer;color:#cc3333;font-size:14px">✕</button>';
-    html+='</div></div>';
-  });
-  lista.innerHTML=html;
-  if(totalBox){totalBox.style.display='block';totalTxt.textContent=fmt(total);}
-}
-
-function cambiarCant(idx,delta){
-  if(!carritoItems[idx])return;
-  carritoItems[idx].cantidad+=delta;
-  if(carritoItems[idx].cantidad<=0){carritoItems.splice(idx,1);}
-  else{carritoItems[idx].subtotal=carritoItems[idx].cantidad*carritoItems[idx].precioUnit;}
-  renderCarrito();
-}
-
-function quitarItem(idx){
-  carritoItems.splice(idx,1);
-  renderCarrito();
-}
-
-function actualizarPrecio(){} // legacy compat
-function calcTotal(){} // legacy compat
 
 function guardarVenta(){
   if(carritoItems.length===0){showToast('Agrega al menos un producto',true);return;}
