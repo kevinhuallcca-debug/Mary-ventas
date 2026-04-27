@@ -960,25 +960,14 @@ function getTurnoAuto(){var h=new Date().getHours();return h<12?'desayuno':h<17?
 
 function renderFormProducto(onAdd){
   var turno=document.getElementById('np-turno')?document.getElementById('np-turno').value:getTurnoAuto();
-  // Filtrar: turno seleccionado + bebidas + otros (no mostrar otros turnos)
+  // Solo mostrar productos del turno seleccionado + bebidas
   var del_turno=productos.filter(function(p){return p.turno===turno;});
   var bebidas=productos.filter(function(p){return p.turno==='bebidas';});
-  var otros=productos.filter(function(p){return p.turno==='otro';});
   var opts='<option value="">-- Elige producto --</option>';
-  if(del_turno.length){
-    opts+='<optgroup label="'+turnoLabel(turno)+'">';
-    del_turno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' ('+fmt(p.precio)+')</option>';});
-    opts+='</optgroup>';
-  }
+  del_turno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' ('+fmt(p.precio)+')</option>';});
   if(bebidas.length){
-    opts+='<optgroup label="🥤 Bebidas">';
-    bebidas.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' ('+fmt(p.precio)+')</option>';});
-    opts+='</optgroup>';
-  }
-  if(otros.length){
-    opts+='<optgroup label="Otros">';
-    otros.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' ('+fmt(p.precio)+')</option>';});
-    opts+='</optgroup>';
+    if(del_turno.length)opts+='<optgroup label="─────────────────"></optgroup>';
+    bebidas.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">🥤 '+p.nombre+' ('+fmt(p.precio)+')</option>';});
   }
   var html='<div class="field"><label>Agregar producto</label>';
   html+='<select id="np-prod" onchange="'+onAdd.replace('()','Auto()')+'" style="width:100%;border:1px solid #e0d5c5;border-radius:8px;padding:10px;font-size:14px;font-family:inherit">'+opts+'</select>';
