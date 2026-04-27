@@ -321,16 +321,7 @@ function loginEmpleado(){
   currentUser={rol:'empleado',personalId:emp.id,nombre:emp.nombre};
   document.getElementById('login-screen').style.display='none';
   startListeners();
-  // Esperar que Firebase cargue los datos antes de mostrar
-  var empRef=emp;
-  var intentos=0;
-  var check=setInterval(function(){
-    intentos++;
-    if(personal.length>0||intentos>20){
-      clearInterval(check);
-      showEmpApp(empRef);
-    }
-  },150);
+  showEmpApp(emp);
 }
 
 function loginCajero(){
@@ -568,6 +559,13 @@ function showAdminApp(){
 }
 
 // ── VISTA EMPLEADO (SOLO LECTURA) ─────────────────────────────
+function refreshEmpView(){
+  if(currentUser&&(currentUser.rol==='empleado'||currentUser.rol==='cajero')&&document.getElementById('emp-app').style.display!=='none'){
+    var emp=personal.find(function(p){return p.id===currentUser.personalId;});
+    if(emp)renderEmpView(emp.id);
+  }
+}
+
 function showEmpApp(emp){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='none';
@@ -756,15 +754,15 @@ function startListeners(){
   });
   db.ref('asistencias').on('value',function(snap){
     asistencias=[];snap.forEach(function(c){asistencias.push(Object.assign({id:c.key},c.val()))});
-    render();
+    render();refreshEmpView();
   });
   db.ref('adelantos').on('value',function(snap){
     adelantos=[];snap.forEach(function(c){adelantos.push(Object.assign({id:c.key},c.val()))});
-    render();
+    render();refreshEmpView();
   });
   db.ref('pagos').on('value',function(snap){
     pagos=[];snap.forEach(function(c){pagos.push(Object.assign({id:c.key},c.val()))});
-    render();
+    render();refreshEmpView();
   });
   db.ref('cajaAperturas').on('value',function(snap){
     cajaAperturas=[];snap.forEach(function(c){cajaAperturas.push(Object.assign({id:c.key},c.val()))});
