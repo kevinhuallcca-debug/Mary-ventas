@@ -963,13 +963,10 @@ function renderFormProducto(onAdd){
   var del_turno=productos.filter(function(p){return p.turno===turno;});
   var otros=productos.filter(function(p){return p.turno!==turno;});
   var opts='<option value="">-- Elige producto --</option>';
-  if(del_turno.length){opts+='<optgroup label="'+turnoLabel(turno)+'">';del_turno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});opts+='</optgroup>';}
-  if(otros.length){opts+='<optgroup label="Otros">';otros.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});opts+='</optgroup>';}
-  var html='<div style="display:flex;gap:8px;align-items:flex-end">';
-  html+='<div class="field" style="flex:2;margin:0"><label>Producto</label><select id="np-prod" onchange="actualizarPrecioCarrito()">'+opts+'</select></div>';
-  html+='<div class="field" style="width:65px;margin:0"><label>Cant.</label><input type="number" id="np-cant" value="1" min="1" style="text-align:center"></div>';
-  html+='<div class="field" style="width:80px;margin:0"><label>Precio</label><input type="number" id="np-precio" step="0.5"></div>';
-  html+='<button onclick="'+onAdd+'" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:22px;margin-bottom:1px;flex-shrink:0">+</button>';
+  if(del_turno.length){opts+='<optgroup label="'+turnoLabel(turno)+'">';del_turno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' ('+fmt(p.precio)+')</option>';});opts+='</optgroup>';}
+  if(otros.length){opts+='<optgroup label="Otros">';otros.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' ('+fmt(p.precio)+')</option>';});opts+='</optgroup>';}
+  var html='<div class="field"><label>Agregar producto</label>';
+  html+='<select id="np-prod" onchange="'+onAdd.replace('()','Auto()')+'" style="width:100%;border:1px solid #e0d5c5;border-radius:8px;padding:10px;font-size:14px;font-family:inherit">'+opts+'</select>';
   html+='</div>';
   return html;
 }
@@ -1006,6 +1003,36 @@ function actualizarPrecioCarrito(){
   var sel=document.getElementById('np-prod');if(!sel)return;
   var opt=sel.options[sel.selectedIndex];
   if(opt&&opt.dataset.precio)document.getElementById('np-precio').value=opt.dataset.precio;
+}
+
+function agregarAlCarritoAuto(){
+  var sel=document.getElementById('np-prod');
+  if(!sel||!sel.value)return;
+  var prod=null;for(var i=0;i<productos.length;i++){if(productos[i].id===sel.value){prod=productos[i];break;}}
+  if(!prod)return;
+  var precio=prod.precio;
+  var existe=carritoItems.findIndex(function(it){return it.prodId===prod.id&&it.precioUnit===precio;});
+  if(existe>=0){carritoItems[existe].cantidad++;carritoItems[existe].subtotal=carritoItems[existe].cantidad*precio;}
+  else carritoItems.push({prodId:prod.id,nombre:prod.nombre,cantidad:1,precioUnit:precio,subtotal:precio});
+  sel.value='';
+  renderCarrito();
+}
+
+function agregarAMesaAuto(){
+  if(!mesaActiva||!mesas[mesaActiva])return;
+  var sel=document.getElementById('np-prod');
+  if(!sel||!sel.value)return;
+  var prod=null;for(var i=0;i<productos.length;i++){if(productos[i].id===sel.value){prod=productos[i];break;}}
+  if(!prod)return;
+  var turno=document.getElementById('np-turno')?document.getElementById('np-turno').value:getTurnoAuto();
+  var pago=document.getElementById('np-pago')?document.getElementById('np-pago').value:'efectivo';
+  var precio=prod.precio;
+  var items=Array.isArray(mesas[mesaActiva].items)?mesas[mesaActiva].items.slice():Object.values(mesas[mesaActiva].items||{});
+  var existe=items.findIndex(function(it){return it.prodId===prod.id&&it.precioUnit===precio&&!it.cobrado;});
+  if(existe>=0){items[existe].cantidad++;items[existe].subtotal=items[existe].cantidad*precio;}
+  else items.push({prodId:prod.id,nombre:prod.nombre,cantidad:1,precioUnit:precio,subtotal:precio});
+  db.ref('mesas/'+mesaActiva).update({items:items,turno:turno,pago:pago,ultimoEditor:currentUser?currentUser.nombre:''});
+  sel.value='';
 }
 
 function agregarAlCarrito(){
