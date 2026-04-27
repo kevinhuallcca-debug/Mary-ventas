@@ -1058,10 +1058,8 @@ function quitarItem(idx){carritoItems.splice(idx,1);renderCarrito();}
 function renderModoMesas(){
   var cont=document.getElementById('nueva');
   var html=cont.innerHTML;
-  var mesaIds=Object.keys(mesas);
-  html+='<div class="card"><div class="sl">Mesas abiertas</div>';
-  if(mesaIds.length===0){html+='<div style="text-align:center;color:#bbb;padding:16px;font-size:13px">Sin mesas abiertas</div>';}
-  else{
+  html+='<div class="card"><div class="sl">Mesas</div>';
+  {
     // Fila 1: mesas fijas 1-4, Fila 2: mesas fijas 5-9
   var FIJAS=['mesa_1','mesa_2','mesa_3','mesa_4','mesa_5','mesa_6','mesa_7','mesa_8','mesa_9'];
   var NOMBRES={mesa_1:'Mesa 1',mesa_2:'Mesa 2',mesa_3:'Mesa 3',mesa_4:'Mesa 4',mesa_5:'Mesa 5',mesa_6:'Mesa 6',mesa_7:'Mesa 7',mesa_8:'Mesa 8',mesa_9:'Mesa 9'};
