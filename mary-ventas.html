@@ -190,6 +190,7 @@ body{font-family:'Source Sans 3',sans-serif;background:#fdf8f0;color:#1a1a1a;min
   <div id="personal" style="display:none"></div>
   <div id="productos" style="display:none"></div>
   <div id="gastos" style="display:none"></div>
+  <div id="sesiones" style="display:none"></div>
 </div>
 
 <!-- VISTA EMPLEADO -->
@@ -258,6 +259,7 @@ auth.onAuthStateChanged(function(user){
     // Admin autenticado
     currentUser={rol:'admin',nombre:'Admin'};
     startListeners();
+    registrarSesion();
     showAdminApp();
   } else {
     // No autenticado — mostrar login
@@ -414,8 +416,119 @@ function seleccionarLocal(id,nombre){
   }
 }
 
+
+// ── SESIONES ACTIVAS ──────────────────────────────────────────
+var sessionId=null;
+
+function generarSessionId(){
+  return Date.now().toString(36)+Math.random().toString(36).substr(2,6);
+}
+
+function getDeviceInfo(){
+  var ua=navigator.userAgent;
+  var device='Computadora';
+  if(/Android/i.test(ua))device='Android';
+  else if(/iPhone|iPad/i.test(ua))device='iPhone/iPad';
+  else if(/Windows/i.test(ua))device='Windows';
+  else if(/Mac/i.test(ua))device='Mac';
+  var browser='Navegador';
+  if(/Chrome/i.test(ua)&&!/Chromium/i.test(ua))browser='Chrome';
+  else if(/Firefox/i.test(ua))browser='Firefox';
+  else if(/Safari/i.test(ua)&&!/Chrome/i.test(ua))browser='Safari';
+  else if(/Edg/i.test(ua))browser='Edge';
+  return device+' · '+browser;
+}
+
+function registrarSesion(){
+  sessionId=generarSessionId();
+  var info={
+    id:sessionId,
+    dispositivo:getDeviceInfo(),
+    inicio:new Date().toLocaleString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+    timestamp:Date.now(),
+    activa:true
+  };
+  db.ref('sesiones/'+sessionId).set(info);
+  // Auto-limpiar al cerrar ventana
+  window.addEventListener('beforeunload',function(){
+    db.ref('sesiones/'+sessionId).remove();
+  });
+  // Escuchar si esta sesion fue cerrada remotamente
+  db.ref('sesiones/'+sessionId+'/activa').on('value',function(snap){
+    if(snap.val()===false){
+      sessionId=null;
+      logout();
+      showToast('Sesión cerrada remotamente');
+    }
+  });
+}
+
+function renderSesiones(){
+  db.ref('sesiones').once('value',function(snap){
+    var sels=[];
+    snap.forEach(function(c){sels.push(Object.assign({id:c.key},c.val()));});
+    sels.sort(function(a,b){return b.timestamp-a.timestamp;});
+    var html='<div class="card"><div class="sl">🔒 Sesiones activas</div>';
+    html+='<div style="font-size:12px;color:#aaa;margin-bottom:12px">Dispositivos con tu sistema abierto ahora mismo</div>';
+    if(sels.length===0){
+      html+='<div class="empty">No hay sesiones activas</div>';
+    } else {
+      sels.forEach(function(s){
+        var esCurrent=s.id===sessionId;
+        html+='<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:0.5px solid #f0e8d8">';
+        html+='<div style="width:36px;height:36px;border-radius:50%;background:'+(esCurrent?'#0F6E56':'#8b0000')+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">';
+        html+=(s.dispositivo&&s.dispositivo.indexOf('Android')>-1||s.dispositivo&&s.dispositivo.indexOf('iPhone')>-1?'📱':'💻')+'</div>';
+        html+='<div style="flex:1">';
+        html+='<div style="font-size:14px;font-weight:600;color:#333">'+s.dispositivo+'</div>';
+        html+='<div style="font-size:11px;color:#aaa">Desde: '+s.inicio+'</div>';
+        if(esCurrent)html+='<div style="font-size:11px;color:#0F6E56;font-weight:600">← Este dispositivo</div>';
+        html+='</div>';
+        if(!esCurrent){
+          html+='<button onclick="cerrarSesionRemota(\''+s.id+'\')" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer">Cerrar</button>';
+        }
+        html+='</div>';
+      });
+      if(sels.length>1){
+        html+='<button onclick="cerrarTodasSesiones()" style="width:100%;margin-top:12px;background:#cc3333;color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;cursor:pointer">Cerrar todas las otras sesiones</button>';
+      }
+    }
+    html+='<button onclick="renderSesiones()" style="width:100%;margin-top:8px;background:#f9f5ef;color:#555;border:1px solid #e0d5c5;border-radius:8px;padding:10px;font-size:13px;cursor:pointer">🔄 Actualizar</button>';
+    html+='</div>';
+    document.getElementById('sesiones').innerHTML=html;
+  });
+}
+
+function cerrarSesionRemota(sid){
+  if(!confirm('¿Cerrar esta sesión remotamente?'))return;
+  db.ref('sesiones/'+sid).update({activa:false}).then(function(){
+    setTimeout(function(){db.ref('sesiones/'+sid).remove();},3000);
+    showToast('Sesión cerrada');
+    renderSesiones();
+  });
+}
+
+function cerrarTodasSesiones(){
+  if(!confirm('¿Cerrar todas las sesiones excepto esta?'))return;
+  db.ref('sesiones').once('value',function(snap){
+    var updates={};
+    snap.forEach(function(c){
+      if(c.key!==sessionId){updates[c.key+'/activa']=false;}
+    });
+    db.ref('sesiones').update(updates).then(function(){
+      setTimeout(function(){
+        db.ref('sesiones').once('value',function(s2){
+          s2.forEach(function(c){if(c.key!==sessionId)db.ref('sesiones/'+c.key).remove();});
+        });
+      },3000);
+      showToast('Todas las otras sesiones cerradas');
+      renderSesiones();
+    });
+  });
+}
+
 function logout(){
   if(currentUser&&currentUser.rol==='admin'){
+    if(sessionId){db.ref('sesiones/'+sessionId).remove();sessionId=null;}
     auth.signOut().then(function(){currentUser=null;showLoginScreen();});
   } else {
     currentUser=null;showLoginScreen();
@@ -435,7 +548,8 @@ function showAdminApp(){
     '<button class="nb" data-tab="historial" onclick="showTab(\'historial\')">Historial</button>',
     '<button class="nb" data-tab="personal" onclick="showTab(\'personal\')">Personal</button>',
     '<button class="nb" data-tab="productos" onclick="showTab(\'productos\')">Productos</button>',
-    '<button class="nb" data-tab="gastos" onclick="showTab(\'gastos\')">Gastos</button>'].join('');
+    '<button class="nb" data-tab="gastos" onclick="showTab(\'gastos\')">Gastos</button>',
+    '<button class="nb" data-tab="sesiones" onclick="showTab(\'sesiones\')">🔒 Sesiones</button>'].join('');
   render();
 }
 
@@ -654,7 +768,7 @@ function showTab(name){
     if(dt){b.classList.toggle('on',dt===name);}
     else{b.classList.toggle('on',b.getAttribute('onclick')&&b.getAttribute('onclick').indexOf("'"+name+"'")>-1);}
   });
-  ['dashboard','nueva','historial','personal','productos','gastos'].forEach(function(t){
+  ['dashboard','nueva','historial','personal','productos','gastos','sesiones'].forEach(function(t){
     document.getElementById(t).style.display=t===name?'block':'none';
   });
   render();
@@ -667,6 +781,7 @@ function render(){
   else if(activeTab==='personal'){if(selectedEmpId)renderEmpDetail();else renderPersonalList();}
   else if(activeTab==='gastos')renderGastos();
   else if(activeTab==='productos')renderProductos();
+  else if(activeTab==='sesiones')renderSesiones();
 }
 
 function renderDashboard(){
