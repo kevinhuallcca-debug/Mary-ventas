@@ -591,6 +591,7 @@ function renderEmpView(empId){
   var diasT=[];asisDesde.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo'||a.estado==='descanso pagado')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
   var diasF=[];asisDesde.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
   var diasMed=asisDesde.filter(function(a){return a.estado==='medio tiempo';}).length;
+  var diasDesc=[];asisDesde.forEach(function(a){if(a.estado==='descanso pagado'&&diasDesc.indexOf(a.fecha)<0)diasDesc.push(a.fecha);});
 
   var adEmp=adelantos.filter(function(a){return a.personalId===empId&&!a.liquidado&&(!ultimoPago||a.fecha>ultimoPago);});
   var totalAd=adEmp.reduce(function(a,x){return a+x.monto;},0);
@@ -624,8 +625,10 @@ function renderEmpView(empId){
   if(ultimoPago){html+='<div style="font-size:12px;color:#0F6E56;margin-bottom:8px">Desde: '+fmtDate(ultimoPago)+'</div>';}
   html+='<div class="resumen-box">';
   html+='<div class="resumen-row"><span>Sueldo por día</span><span style="color:#0F6E56">'+fmt(sueldoDiaEmp)+'/día</span></div>';
-  html+='<div class="resumen-row"><span>Dias trabajados</span><span>'+diasT.length+' días · '+fmt(ganadoEmp)+'</span></div>';
+  html+='<div class="resumen-row"><span>Días asistidos</span><span style="color:#185FA5">'+(diasT.length-diasDesc.length)+' días</span></div>';
+  html+='<div class="resumen-row"><span>Descanso pagado</span><span style="color:#6B3FA0">'+diasDesc.length+' días</span></div>';
   html+='<div class="resumen-row"><span>Medio tiempo</span><span style="color:#854F0B">'+diasMed+' días (½ sueldo)</span></div>';
+  html+='<div class="resumen-row"><span>Total días cobrados</span><span style="font-weight:700">'+diasT.length+' días · '+fmt(ganadoEmp)+'</span></div>';
   html+='<div class="resumen-row"><span>Faltas</span><span style="color:#A32D2D">'+diasF.length+' días</span></div>';
   html+='<div class="resumen-row"><span>Adelantos</span><span style="color:#854F0B">- '+fmt(totalAd)+'</span></div>';
   html+='<div class="resumen-row total"><span>Saldo a cobrar</span><span style="color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</span></div>';
