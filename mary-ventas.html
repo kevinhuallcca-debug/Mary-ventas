@@ -995,12 +995,17 @@ function renderModoRapido(){
 
 function actualizarOptsProducto(){
   var sel=document.getElementById('np-prod');if(!sel)return;
-  var turno=document.getElementById('np-turno')?document.getElementById('np-turno').value:'';
-  var del_turno=productos.filter(function(p){return p.turno===turno;});
-  var otros=productos.filter(function(p){return p.turno!==turno;});
+  var cats=['desayuno','almuerzo','cena','bebidas','otro'];
   var opts='<option value="">-- Elige producto --</option>';
-  if(del_turno.length){opts+='<optgroup label="'+turnoLabel(turno)+'">';del_turno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});opts+='</optgroup>';}
-  if(otros.length){opts+='<optgroup label="Otros">';otros.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});opts+='</optgroup>';}
+  cats.forEach(function(cat){
+    var grupo=productos.filter(function(p){return p.turno===cat;});
+    if(grupo.length===0)return;
+    opts+='<optgroup label="'+turnoLabel(cat)+'">';
+    grupo.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});
+    opts+='</optgroup>';
+  });
+  var desconocidos=productos.filter(function(p){return cats.indexOf(p.turno)<0;});
+  if(desconocidos.length){opts+='<optgroup label="Otros">';desconocidos.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});opts+='</optgroup>';}
   sel.innerHTML=opts;actualizarPrecioCarrito();
 }
 
