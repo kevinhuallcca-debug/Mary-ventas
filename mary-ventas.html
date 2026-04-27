@@ -909,39 +909,219 @@ function renderDashboard(){
 
 // Carrito temporal de items
 var carritoItems=[];
+var modoVenta='rapido'; // 'rapido' o 'mesas'
+var mesas={}; // {mesaId: {nombre, items:[], turno, fecha, obs, pago}}
+var mesaActiva=null;
 
 function renderNueva(){
-  var hora=new Date().getHours();
-  var turnoAuto=hora<12?'desayuno':hora<17?'almuerzo':'cena';
-  var html='<div class="card"><div class="sl">Nueva venta</div>';
-  // Turno, fecha, pago, obs — configuracion general
+  var html='';
+  // Selector de modo
+  html+='<div class="card" style="padding:10px">';
+  html+='<div style="display:flex;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid #8b0000">';
+  html+='<button onclick="setModoVenta(\'rapido\')" style="flex:1;padding:11px;border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;background:'+(modoVenta==='rapido'?'#8b0000':'#fff')+';color:'+(modoVenta==='rapido'?'#fff':'#8b0000')+'">⚡ Venta rápida</button>';
+  html+='<button onclick="setModoVenta(\'mesas\')" style="flex:1;padding:11px;border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;background:'+(modoVenta==='mesas'?'#8b0000':'#fff')+';color:'+(modoVenta==='mesas'?'#fff':'#8b0000')+'">🪑 Mesas</button>';
+  html+='</div></div>';
+  document.getElementById('nueva').innerHTML=html;
+  if(modoVenta==='rapido') renderModoRapido();
+  else renderModoMesas();
+}
+
+function setModoVenta(modo){
+  modoVenta=modo;
+  mesaActiva=null;
+  renderNueva();
+}
+
+function getTurnoAuto(){
+  var h=new Date().getHours();
+  return h<12?'desayuno':h<17?'almuerzo':'cena';
+}
+
+function renderFormProducto(onAdd){
+  var turno=document.getElementById('np-turno')?document.getElementById('np-turno').value:getTurnoAuto();
+  var del_turno=productos.filter(function(p){return p.turno===turno;});
+  var otros=productos.filter(function(p){return p.turno!==turno;});
+  var opts='<option value="">-- Elige producto --</option>';
+  if(del_turno.length){opts+='<optgroup label="'+turnoLabel(turno)+'">';del_turno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});opts+='</optgroup>';}
+  if(otros.length){opts+='<optgroup label="Otros">';otros.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});opts+='</optgroup>';}
+  var html='';
+  html+='<div style="display:flex;gap:8px;align-items:flex-end">';
+  html+='<div class="field" style="flex:2;margin:0"><label>Producto</label><select id="np-prod" onchange="actualizarPrecioCarrito()">'+opts+'</select></div>';
+  html+='<div class="field" style="width:65px;margin:0"><label>Cant.</label><input type="number" id="np-cant" value="1" min="1" style="text-align:center"></div>';
+  html+='<div class="field" style="width:80px;margin:0"><label>Precio</label><input type="number" id="np-precio" step="0.5"></div>';
+  html+='<button onclick="'+onAdd+'" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:22px;margin-bottom:1px;flex-shrink:0">+</button>';
+  html+='</div>';
+  return html;
+}
+
+// ── MODO RAPIDO ───────────────────────────────────────────────
+function renderModoRapido(){
+  var turnoAuto=getTurnoAuto();
+  var cont=document.getElementById('nueva');
+  var html=cont.innerHTML;
+  html+='<div class="card"><div class="sl">Detalles</div>';
   html+='<div class="g2"><div class="field"><label>Turno</label><select id="np-turno" onchange="actualizarOptsProducto()"><option value="desayuno"'+(turnoAuto==='desayuno'?' selected':'')+'>🌅 Desayuno</option><option value="almuerzo"'+(turnoAuto==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option><option value="cena"'+(turnoAuto==='cena'?' selected':'')+'>🌙 Cena</option><option value="otro">📦 Otro</option></select></div>';
   html+='<div class="field"><label>Fecha</label><input type="date" id="np-fecha" value="'+today()+'"></div></div>';
-  html+='<div class="g2"><div class="field"><label>Método de pago</label><select id="np-pago"><option value="efectivo">💵 Efectivo</option><option value="yape">💜 Yape</option></select></div>';
-  html+='<div class="field"><label>Observación</label><input type="text" id="np-obs" placeholder="Ej: para llevar..."></div></div>';
-  html+='</div>';
-
-  // Agregar productos al carrito
-  html+='<div class="card"><div class="sl">Agregar productos</div>';
-  html+='<div style="display:flex;gap:8px;align-items:flex-end">';
-  html+='<div class="field" style="flex:2;margin:0"><label>Producto</label><select id="np-prod" onchange="actualizarPrecioCarrito()"><option value="">-- Elige --</option></select></div>';
-  html+='<div class="field" style="width:70px;margin:0"><label>Cant.</label><input type="number" id="np-cant" value="1" min="1" style="text-align:center" oninput="calcTotalCarrito()"></div>';
-  html+='<div class="field" style="width:80px;margin:0"><label>Precio</label><input type="number" id="np-precio" step="0.5" oninput="calcTotalCarrito()"></div>';
-  html+='<button onclick="agregarAlCarrito()" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:20px;margin-bottom:1px;flex-shrink:0">+</button>';
-  html+='</div>';
-  html+='<div id="carrito-lista" style="margin-top:12px"></div>';
-  html+='</div>';
-
-  // Boton guardar
+  html+='<div class="g2"><div class="field"><label>Pago</label><select id="np-pago"><option value="efectivo">💵 Efectivo</option><option value="yape">💜 Yape</option></select></div>';
+  html+='<div class="field"><label>Observación</label><input type="text" id="np-obs" placeholder="Ej: para llevar..."></div></div></div>';
+  html+='<div class="card"><div class="sl">Productos</div>';
+  html+=renderFormProducto('agregarAlCarrito()');
+  html+='<div id="carrito-lista" style="margin-top:12px"></div></div>';
   html+='<div style="padding:0 0 1rem">';
-  html+='<div id="carrito-total-box" style="display:none;background:#f0faf5;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center">';
-  html+='<span style="font-size:13px;color:#555">Total a cobrar: </span><span id="carrito-total-txt" style="font-size:22px;font-weight:700;color:#0F6E56"></span></div>';
-  html+='<button class="btn" onclick="guardarVenta()" style="font-size:16px;padding:14px">✓ Registrar venta</button>';
-  html+='</div>';
-
-  document.getElementById('nueva').innerHTML=html;
+  html+='<div id="carrito-total-box" style="display:none;background:#f0faf5;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center"><span style="font-size:13px;color:#555">Total: </span><span id="carrito-total-txt" style="font-size:22px;font-weight:700;color:#0F6E56"></span></div>';
+  html+='<button class="btn" onclick="guardarVenta()" style="font-size:16px;padding:14px">✓ Registrar venta</button></div>';
+  cont.innerHTML=html;
   carritoItems=[];
   actualizarOptsProducto();
+}
+
+// ── MODO MESAS ────────────────────────────────────────────────
+function renderModoMesas(){
+  var cont=document.getElementById('nueva');
+  var html=cont.innerHTML;
+  var mesaIds=Object.keys(mesas);
+  html+='<div class="card"><div class="sl">Mesas abiertas</div>';
+  if(mesaIds.length===0){
+    html+='<div style="text-align:center;color:#bbb;padding:16px;font-size:13px">Sin mesas abiertas</div>';
+  } else {
+    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">';
+    mesaIds.forEach(function(mid){
+      var m=mesas[mid];
+      var tot=m.items.reduce(function(a,it){return a+it.subtotal;},0);
+      var nitems=m.items.reduce(function(a,it){return a+it.cantidad;},0);
+      html+='<button onclick="abrirMesa(\''+mid+'\')" style="background:'+(mesaActiva===mid?'#8b0000':'#f9f5ef')+';color:'+(mesaActiva===mid?'#fff':'#333')+';border:1.5px solid '+(mesaActiva===mid?'#8b0000':'#e0d5c5')+';border-radius:12px;padding:12px 8px;cursor:pointer;text-align:center;font-family:inherit">';
+      html+='<div style="font-size:16px;font-weight:700">'+m.nombre+'</div>';
+      html+='<div style="font-size:11px;opacity:0.8">'+nitems+' items</div>';
+      html+='<div style="font-size:14px;font-weight:600;margin-top:4px">'+fmt(tot)+'</div>';
+      html+='</button>';
+    });
+    html+='</div>';
+  }
+  // Agregar nueva mesa
+  html+='<div style="display:flex;gap:8px">';
+  html+='<input type="text" id="nueva-mesa-nom" placeholder="Ej: Mesa 1, Mesa 2..." style="flex:1;border:1px solid #e0d5c5;border-radius:8px;padding:10px;font-size:14px;font-family:inherit">';
+  html+='<button onclick="crearMesa()" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:10px 16px;cursor:pointer;font-size:14px">Abrir mesa</button>';
+  html+='</div></div>';
+  // Panel de mesa activa
+  if(mesaActiva&&mesas[mesaActiva]){
+    var m=mesas[mesaActiva];
+    var tot=m.items.reduce(function(a,it){return a+it.subtotal;},0);
+    html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+    html+='<div class="sl" style="margin:0">'+m.nombre+'</div>';
+    html+='<button onclick="cerrarMesaSinPagar()" style="background:none;border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:#aaa">Cancelar mesa</button></div>';
+    // Config turno/pago para esta mesa
+    var turnoAuto=getTurnoAuto();
+    html+='<div class="g2"><div class="field"><label>Turno</label><select id="np-turno" onchange="actualizarOptsProducto()"><option value="desayuno"'+(m.turno==='desayuno'?' selected':'')+'>🌅 Desayuno</option><option value="almuerzo"'+(m.turno==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option><option value="cena"'+(m.turno==='cena'?' selected':'')+'>🌙 Cena</option><option value="otro"'+(m.turno==='otro'?' selected':'')+'>📦 Otro</option></select></div>';
+    html+='<div class="field"><label>Pago</label><select id="np-pago"><option value="efectivo"'+(m.pago==='efectivo'?' selected':'')+'>💵 Efectivo</option><option value="yape"'+(m.pago==='yape'?' selected':'')+'>💜 Yape</option></select></div></div>';
+    // Form agregar producto
+    html+=renderFormProducto('agregarAMesa()');
+    // Lista items de la mesa
+    html+='<div style="margin-top:12px">';
+    if(m.items.length===0){
+      html+='<div style="text-align:center;color:#bbb;font-size:13px;padding:12px">Sin productos aún</div>';
+    } else {
+      m.items.forEach(function(it,idx){
+        html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #f0e8d8">';
+        html+='<div style="flex:1"><div style="font-size:14px;font-weight:600">'+it.nombre+'</div>';
+        html+='<div style="font-size:12px;color:#aaa">'+it.cantidad+' × '+fmt(it.precioUnit)+'</div></div>';
+        html+='<div style="font-size:15px;font-weight:700;color:#0F6E56;min-width:55px;text-align:right">'+fmt(it.subtotal)+'</div>';
+        html+='<div style="display:flex;gap:4px">';
+        html+='<button onclick="cambiarCantMesa('+idx+',-1)" style="width:28px;height:28px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer">−</button>';
+        html+='<span style="min-width:22px;text-align:center;font-size:14px;line-height:28px">'+it.cantidad+'</span>';
+        html+='<button onclick="cambiarCantMesa('+idx+',1)" style="width:28px;height:28px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer">+</button>';
+        html+='<button onclick="quitarItemMesa('+idx+')" style="width:28px;height:28px;border-radius:6px;border:1px solid #fdd;background:#fff;cursor:pointer;color:#cc3333">✕</button>';
+        html+='</div></div>';
+      });
+    }
+    html+='</div>';
+    // Total y cobrar
+    html+='<div style="margin-top:14px;background:#f0faf5;border-radius:10px;padding:14px;text-align:center">';
+    html+='<div style="font-size:13px;color:#555">Total '+m.nombre+'</div>';
+    html+='<div style="font-size:28px;font-weight:700;color:#0F6E56">'+fmt(tot)+'</div></div>';
+    html+='<button onclick="cobrarMesa()" style="width:100%;margin-top:10px;background:#0F6E56;color:#fff;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:700;cursor:pointer">💰 Cobrar '+m.nombre+'</button>';
+    html+='</div>';
+  }
+  cont.innerHTML=html;
+  actualizarOptsProducto();
+}
+
+function crearMesa(){
+  var nom=document.getElementById('nueva-mesa-nom').value.trim();
+  if(!nom){showToast('Escribe el nombre de la mesa',true);return;}
+  var id='mesa_'+Date.now();
+  var turnoAuto=getTurnoAuto();
+  mesas[id]={nombre:nom,items:[],turno:turnoAuto,pago:'efectivo'};
+  mesaActiva=id;
+  renderNueva();
+}
+
+function abrirMesa(id){
+  mesaActiva=id;
+  renderNueva();
+}
+
+function agregarAMesa(){
+  if(!mesaActiva||!mesas[mesaActiva]){return;}
+  var sel=document.getElementById('np-prod');
+  if(!sel||!sel.value){showToast('Selecciona un producto',true);return;}
+  var prod=null;for(var i=0;i<productos.length;i++){if(productos[i].id===sel.value){prod=productos[i];break;}}
+  if(!prod){return;}
+  var cant=parseFloat(document.getElementById('np-cant').value)||1;
+  var precio=parseFloat(document.getElementById('np-precio').value)||0;
+  if(cant<=0||precio<=0){showToast('Cantidad y precio deben ser mayores a 0',true);return;}
+  // Guardar turno y pago seleccionados
+  mesas[mesaActiva].turno=document.getElementById('np-turno').value;
+  mesas[mesaActiva].pago=document.getElementById('np-pago').value;
+  var items=mesas[mesaActiva].items;
+  var existe=items.findIndex(function(it){return it.prodId===prod.id&&it.precioUnit===precio;});
+  if(existe>=0){items[existe].cantidad+=cant;items[existe].subtotal=items[existe].cantidad*precio;}
+  else{items.push({prodId:prod.id,nombre:prod.nombre,cantidad:cant,precioUnit:precio,subtotal:cant*precio});}
+  renderNueva();
+}
+
+function cambiarCantMesa(idx,delta){
+  if(!mesaActiva||!mesas[mesaActiva])return;
+  var items=mesas[mesaActiva].items;
+  if(!items[idx])return;
+  items[idx].cantidad+=delta;
+  if(items[idx].cantidad<=0){items.splice(idx,1);}
+  else{items[idx].subtotal=items[idx].cantidad*items[idx].precioUnit;}
+  renderNueva();
+}
+
+function quitarItemMesa(idx){
+  if(!mesaActiva||!mesas[mesaActiva])return;
+  mesas[mesaActiva].items.splice(idx,1);
+  renderNueva();
+}
+
+function cerrarMesaSinPagar(){
+  if(!confirm('¿Cancelar esta mesa? Se perderán los productos agregados.'))return;
+  delete mesas[mesaActiva];
+  mesaActiva=null;
+  renderNueva();
+}
+
+function cobrarMesa(){
+  if(!mesaActiva||!mesas[mesaActiva])return;
+  var m=mesas[mesaActiva];
+  if(m.items.length===0){showToast('Agrega al menos un producto',true);return;}
+  var turno=m.turno;
+  var pago=m.pago;
+  var fecha=today();
+  var hora=nowTime();
+  var ts=new Date().toISOString();
+  var total=m.items.reduce(function(a,it){return a+it.subtotal;},0);
+  var obs=m.nombre;
+  var promesas=m.items.map(function(it){
+    return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts});
+  });
+  Promise.all(promesas).then(function(){
+    showToast('✓ '+m.nombre+' cobrada — '+fmt(total));
+    delete mesas[mesaActiva];
+    mesaActiva=null;
+    renderNueva();
+  });
 }
 
 function actualizarOptsProducto(){
