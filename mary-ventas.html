@@ -580,6 +580,7 @@ function startListeners(){
   db.ref('personal').on('value',function(snap){
     personal=[];snap.forEach(function(c){personal.push(Object.assign({id:c.key},c.val()))});
     personal.sort(function(a,b){return a.nombre.localeCompare(b.nombre)});
+    migrarSueldoExistentes();;
     render();
     // Actualizar select de empleados en login
     var sel=document.getElementById('emp-select');
@@ -1384,8 +1385,20 @@ function renderSubLiquidacion(emp,mes){
   return html;
 }
 
-function actualizarSueldoDia(empId){
-  var inp=document.getElementById('nuevo-sueldo-'+empId);
+function migrarSueldoExistentes(){
+  personal.forEach(function(emp){
+    if((emp.sueldo||0)>0 && !emp.sueldoDia){
+      var upd={sueldoDia:emp.sueldo};
+      if(!emp.historialSueldos||emp.historialSueldos.length===0){
+        upd.historialSueldos=[{fecha:today(),monto:emp.sueldo,hora:'migrado'}];
+      }
+      db.ref('personal/'+emp.id).update(upd);
+    }
+  });
+}
+
+function actualizarSueldoDia(empId,inputId){
+  var inp=document.getElementById(inputId||('nuevo-sueldo-'+empId));
   var monto=parseFloat(inp.value);
   if(!monto||monto<=0){showToast('Ingresa un monto válido',true);return;}
   var emp=personal.find(function(p){return p.id===empId;});
