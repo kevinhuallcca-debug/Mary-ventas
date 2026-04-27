@@ -1061,9 +1061,28 @@ function renderPersonalList(){
   if(personal.length===0){html+='<div class="empty">Sin empleados registrados</div>';}
   else{personal.forEach(function(p){
     var mes=getMes();
-    var totalAd=adelantos.filter(function(a){return a.personalId===p.id&&a.fecha.slice(0,7)===mes&&!a.liquidado}).reduce(function(a,x){return a+x.monto},0);
-    var totalPa=pagos.filter(function(a){return a.personalId===p.id&&a.fecha.slice(0,7)===mes}).reduce(function(a,x){return a+x.monto},0);
-    var sueldoDia=p.sueldoDia||p.sueldo||0; var saldo=sueldoDia-totalAd-totalPa;
+    // Ultimo pago
+    var pagosEmpL=pagos.filter(function(a){return a.personalId===p.id;});
+    pagosEmpL.sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+    var ultimoPagoL=pagosEmpL.length?pagosEmpL[0].fecha:null;
+    // Asistencias desde ultimo pago
+    var asisEmpL=asistencias.filter(function(a){return a.personalId===p.id&&(!ultimoPagoL||a.fecha>ultimoPagoL);});
+    var sueldoDia=p.sueldoDia||p.sueldo||0;
+    var histSL=(p.historialSueldos||[]).slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+    function getSueldoDiaL(fecha){
+      var s=sueldoDia;
+      for(var i=histSL.length-1;i>=0;i--){if(histSL[i].fecha<=fecha){s=histSL[i].monto;break;}}
+      return s;
+    }
+    var diasTL=[];asisEmpL.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasTL.indexOf(a.fecha)<0)diasTL.push(a.fecha);});
+    var ganadoL=0;
+    diasTL.forEach(function(f){
+      var s=getSueldoDiaL(f);
+      var esMedioL=asisEmpL.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
+      ganadoL+=esMedioL?s/2:s;
+    });
+    var totalAd=adelantos.filter(function(a){return a.personalId===p.id&&!a.liquidado&&(!ultimoPagoL||a.fecha>ultimoPagoL)}).reduce(function(a,x){return a+x.monto},0);
+    var saldo=ganadoL-totalAd;
     var asisHoy=asistencias.filter(function(a){return a.personalId===p.id&&a.fecha===today()});
     var ult=asisHoy.length?asisHoy[asisHoy.length-1]:null;
     var dc='dot-none';
@@ -1078,8 +1097,10 @@ function renderPersonalList(){
     html+='<div class="emp-avatar">'+initials(p.nombre)+'</div>';
     html+='<div style="flex:1"><div class="rn">'+p.nombre+'</div>';
     html+='<div class="rm">'+p.cargo+' · <span style="color:'+dotColor+'">'+estadoLabel+'</span></div></div>';
-    html+='<div style="text-align:right"><div style="font-size:13px;font-weight:600;color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</div>';
-    html+='<div style="font-size:10px;color:#aaa">saldo mes</div></div></div>';
+    html+='<div style="text-align:right">';
+    html+='<div style="font-size:11px;color:#aaa">'+fmt(sueldoDia)+'/día · '+diasTL.length+'d</div>';
+    html+='<div style="font-size:15px;font-weight:700;color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</div>';
+    html+='<div style="font-size:10px;color:#aaa">ganado - adelantos</div></div></div>';
     // Botones de asistencia directa
     html+='<div style="display:flex;gap:6px">';
     html+='<button onclick="marcarAsisDirecto(\''+p.id+'\',\''+p.nombre+'\',\'asistio\')" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='asistio'?'#185FA5':'#ddd')+';background:'+(estadoHoy==='asistio'?'#185FA5':'#fff')+';color:'+(estadoHoy==='asistio'?'#fff':'#555')+';font-size:12px;cursor:pointer">✓ Asistió</button>';
