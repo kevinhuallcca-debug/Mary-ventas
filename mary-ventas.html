@@ -705,6 +705,14 @@ function startListeners(){
     if(productos.length===0){defaultProductos.forEach(function(p){db.ref('productos').push(p)})}
     render();
   });
+  db.ref('mesas').on('value',function(snap){
+    mesas={};
+    snap.forEach(function(c){
+      var m=c.val();
+      if(m){mesas[c.key]=m;}
+    });
+    if(activeTab==='nueva')renderNueva();
+  });
   db.ref('ventas').on('value',function(snap){
     ventas=[];snap.forEach(function(c){ventas.push(Object.assign({id:c.key},c.val()))});
     ventas.sort(function(a,b){return(b.timestamp||'').localeCompare(a.timestamp||'')});
@@ -910,7 +918,7 @@ function renderDashboard(){
 // Carrito temporal de items
 var carritoItems=[];
 var modoVenta='rapido'; // 'rapido' o 'mesas'
-var mesas={}; // {mesaId: {nombre, items:[], turno, fecha, obs, pago}}
+var mesas={}; // sincronizado con Firebase en tiempo real
 var mesaActiva=null;
 
 function renderNueva(){
@@ -1006,9 +1014,11 @@ function renderModoMesas(){
   if(mesaActiva&&mesas[mesaActiva]){
     var m=mesas[mesaActiva];
     var tot=m.items.reduce(function(a,it){return a+it.subtotal;},0);
-    html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+    html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
     html+='<div class="sl" style="margin:0">'+m.nombre+'</div>';
-    html+='<button onclick="cerrarMesaSinPagar()" style="background:none;border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:#aaa">Cancelar mesa</button></div>';
+    html+='<button onclick="cerrarMesaSinPagar()" style="background:none;border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:#aaa">Cancelar</button></div>';
+    if(m.ultimoEditor){html+='<div style="font-size:11px;color:#aaa;margin-bottom:8px">Último cambio por: <strong>'+m.ultimoEditor+'</strong></div>';}
+    if(m.creadoPor){html+='<div style="font-size:11px;color:#aaa;margin-bottom:8px">Creada por: <strong>'+m.creadoPor+'</strong></div>';}
     // Config turno/pago para esta mesa
     var turnoAuto=getTurnoAuto();
     html+='<div class="g2"><div class="field"><label>Turno</label><select id="np-turno" onchange="actualizarOptsProducto()"><option value="desayuno"'+(m.turno==='desayuno'?' selected':'')+'>🌅 Desayuno</option><option value="almuerzo"'+(m.turno==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option><option value="cena"'+(m.turno==='cena'?' selected':'')+'>🌙 Cena</option><option value="otro"'+(m.turno==='otro'?' selected':'')+'>📦 Otro</option></select></div>';
@@ -1050,9 +1060,11 @@ function crearMesa(){
   if(!nom){showToast('Escribe el nombre de la mesa',true);return;}
   var id='mesa_'+Date.now();
   var turnoAuto=getTurnoAuto();
-  mesas[id]={nombre:nom,items:[],turno:turnoAuto,pago:'efectivo'};
-  mesaActiva=id;
-  renderNueva();
+  var nueva={nombre:nom,items:[],turno:turnoAuto,pago:'efectivo',creadoPor:currentUser?currentUser.nombre:'',timestamp:Date.now()};
+  db.ref('mesas/'+id).set(nueva).then(function(){
+    mesaActiva=id;
+    renderNueva();
+  });
 }
 
 function abrirMesa(id){
@@ -1069,45 +1081,54 @@ function agregarAMesa(){
   var cant=parseFloat(document.getElementById('np-cant').value)||1;
   var precio=parseFloat(document.getElementById('np-precio').value)||0;
   if(cant<=0||precio<=0){showToast('Cantidad y precio deben ser mayores a 0',true);return;}
-  // Guardar turno y pago seleccionados
-  mesas[mesaActiva].turno=document.getElementById('np-turno').value;
-  mesas[mesaActiva].pago=document.getElementById('np-pago').value;
-  var items=mesas[mesaActiva].items;
+  var turno=document.getElementById('np-turno').value;
+  var pago=document.getElementById('np-pago').value;
+  var items=(mesas[mesaActiva].items||[]).slice();
   var existe=items.findIndex(function(it){return it.prodId===prod.id&&it.precioUnit===precio;});
   if(existe>=0){items[existe].cantidad+=cant;items[existe].subtotal=items[existe].cantidad*precio;}
   else{items.push({prodId:prod.id,nombre:prod.nombre,cantidad:cant,precioUnit:precio,subtotal:cant*precio});}
-  renderNueva();
+  // Guardar en Firebase — se sincroniza a todos
+  db.ref('mesas/'+mesaActiva).update({items:items,turno:turno,pago:pago,ultimoEditor:currentUser?currentUser.nombre:''});
+  // Limpiar form
+  document.getElementById('np-prod').value='';
+  document.getElementById('np-cant').value='1';
+  document.getElementById('np-precio').value='';
 }
 
 function cambiarCantMesa(idx,delta){
   if(!mesaActiva||!mesas[mesaActiva])return;
-  var items=mesas[mesaActiva].items;
+  var items=(mesas[mesaActiva].items||[]).slice();
   if(!items[idx])return;
   items[idx].cantidad+=delta;
   if(items[idx].cantidad<=0){items.splice(idx,1);}
   else{items[idx].subtotal=items[idx].cantidad*items[idx].precioUnit;}
-  renderNueva();
+  db.ref('mesas/'+mesaActiva).update({items:items,ultimoEditor:currentUser?currentUser.nombre:''});
 }
 
 function quitarItemMesa(idx){
   if(!mesaActiva||!mesas[mesaActiva])return;
-  mesas[mesaActiva].items.splice(idx,1);
-  renderNueva();
+  var items=(mesas[mesaActiva].items||[]).slice();
+  items.splice(idx,1);
+  db.ref('mesas/'+mesaActiva).update({items:items,ultimoEditor:currentUser?currentUser.nombre:''});
 }
 
 function cerrarMesaSinPagar(){
   if(!confirm('¿Cancelar esta mesa? Se perderán los productos agregados.'))return;
-  delete mesas[mesaActiva];
-  mesaActiva=null;
-  renderNueva();
+  db.ref('mesas/'+mesaActiva).remove().then(function(){
+    mesaActiva=null;
+    renderNueva();
+  });
 }
 
 function cobrarMesa(){
   if(!mesaActiva||!mesas[mesaActiva])return;
   var m=mesas[mesaActiva];
-  if(m.items.length===0){showToast('Agrega al menos un producto',true);return;}
-  var turno=m.turno;
-  var pago=m.pago;
+  if(!m.items||m.items.length===0){showToast('Agrega al menos un producto',true);return;}
+  // Leer turno y pago del formulario si existen
+  var turnoEl=document.getElementById('np-turno');
+  var pagoEl=document.getElementById('np-pago');
+  var turno=turnoEl?turnoEl.value:m.turno;
+  var pago=pagoEl?pagoEl.value:m.pago;
   var fecha=today();
   var hora=nowTime();
   var ts=new Date().toISOString();
@@ -1117,8 +1138,10 @@ function cobrarMesa(){
     return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts});
   });
   Promise.all(promesas).then(function(){
+    // Borrar mesa de Firebase
+    return db.ref('mesas/'+mesaActiva).remove();
+  }).then(function(){
     showToast('✓ '+m.nombre+' cobrada — '+fmt(total));
-    delete mesas[mesaActiva];
     mesaActiva=null;
     renderNueva();
   });
