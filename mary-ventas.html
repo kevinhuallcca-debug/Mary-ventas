@@ -907,45 +907,169 @@ function renderDashboard(){
   document.getElementById('dashboard').innerHTML=html;
 }
 
+// Carrito temporal de items
+var carritoItems=[];
+
 function renderNueva(){
-  var opts=productos.map(function(p){return'<option value="'+p.id+'" data-precio="'+p.precio+'" data-turno="'+p.turno+'">'+p.nombre+' - '+fmt(p.precio)+'</option>'}).join('');
-  var html='<div class="card"><div class="sl">Registrar venta</div>';
-  html+='<div class="field"><label>Producto</label><select id="np-prod" onchange="actualizarPrecio()">'+opts+'</select></div>';
-  html+='<div class="g3"><div class="field"><label>Cantidad</label><input type="number" id="np-cant" value="1" min="1" oninput="calcTotal()"></div>';
-  html+='<div class="field"><label>Precio (S/)</label><input type="number" id="np-precio" step="0.5" oninput="calcTotal()"></div>';
-  html+='<div class="field"><label>Total</label><input type="text" id="np-total" readonly class="total-field"></div></div>';
-  html+='<div class="g2"><div class="field"><label>Turno</label><select id="np-turno"><option value="desayuno">Desayuno</option><option value="almuerzo" selected>Almuerzo</option><option value="cena">Cena</option><option value="otro">Otro</option></select></div>';
+  var hora=new Date().getHours();
+  var turnoAuto=hora<12?'desayuno':hora<17?'almuerzo':'cena';
+  var html='<div class="card"><div class="sl">Nueva venta</div>';
+  // Turno, fecha, pago, obs — configuracion general
+  html+='<div class="g2"><div class="field"><label>Turno</label><select id="np-turno" onchange="actualizarOptsProducto()"><option value="desayuno"'+(turnoAuto==='desayuno'?' selected':'')+'>🌅 Desayuno</option><option value="almuerzo"'+(turnoAuto==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option><option value="cena"'+(turnoAuto==='cena'?' selected':'')+'>🌙 Cena</option><option value="otro">📦 Otro</option></select></div>';
   html+='<div class="field"><label>Fecha</label><input type="date" id="np-fecha" value="'+today()+'"></div></div>';
-  html+='<div class="g2"><div class="field"><label>Metodo de pago</label><select id="np-pago"><option value="efectivo">💵 Efectivo</option><option value="yape">💜 Yape</option></select></div>';
-  html+='<div class="field"><label>Observacion</label><input type="text" id="np-obs" placeholder="Ej: para llevar..."></div></div>';
-  html+='<button class="btn" onclick="guardarVenta()">Registrar venta</button></div>';
-  document.getElementById('nueva').innerHTML=html;actualizarPrecio();
+  html+='<div class="g2"><div class="field"><label>Método de pago</label><select id="np-pago"><option value="efectivo">💵 Efectivo</option><option value="yape">💜 Yape</option></select></div>';
+  html+='<div class="field"><label>Observación</label><input type="text" id="np-obs" placeholder="Ej: para llevar..."></div></div>';
+  html+='</div>';
+
+  // Agregar productos al carrito
+  html+='<div class="card"><div class="sl">Agregar productos</div>';
+  html+='<div style="display:flex;gap:8px;align-items:flex-end">';
+  html+='<div class="field" style="flex:2;margin:0"><label>Producto</label><select id="np-prod" onchange="actualizarPrecioCarrito()"><option value="">-- Elige --</option></select></div>';
+  html+='<div class="field" style="width:70px;margin:0"><label>Cant.</label><input type="number" id="np-cant" value="1" min="1" style="text-align:center" oninput="calcTotalCarrito()"></div>';
+  html+='<div class="field" style="width:80px;margin:0"><label>Precio</label><input type="number" id="np-precio" step="0.5" oninput="calcTotalCarrito()"></div>';
+  html+='<button onclick="agregarAlCarrito()" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:20px;margin-bottom:1px;flex-shrink:0">+</button>';
+  html+='</div>';
+  html+='<div id="carrito-lista" style="margin-top:12px"></div>';
+  html+='</div>';
+
+  // Boton guardar
+  html+='<div style="padding:0 0 1rem">';
+  html+='<div id="carrito-total-box" style="display:none;background:#f0faf5;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center">';
+  html+='<span style="font-size:13px;color:#555">Total a cobrar: </span><span id="carrito-total-txt" style="font-size:22px;font-weight:700;color:#0F6E56"></span></div>';
+  html+='<button class="btn" onclick="guardarVenta()" style="font-size:16px;padding:14px">✓ Registrar venta</button>';
+  html+='</div>';
+
+  document.getElementById('nueva').innerHTML=html;
+  carritoItems=[];
+  actualizarOptsProducto();
 }
-function actualizarPrecio(){
+
+function actualizarOptsProducto(){
+  var sel=document.getElementById('np-prod');if(!sel)return;
+  var turno=document.getElementById('np-turno')?document.getElementById('np-turno').value:'';
+  // Mostrar todos los productos pero primero los del turno seleccionado
+  var del_turno=productos.filter(function(p){return p.turno===turno;});
+  var otros=productos.filter(function(p){return p.turno!==turno;});
+  var opts='<option value="">-- Elige producto --</option>';
+  if(del_turno.length){
+    opts+='<optgroup label="'+turnoLabel(turno)+'">';
+    del_turno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});
+    opts+='</optgroup>';
+  }
+  if(otros.length){
+    opts+='<optgroup label="Otros">';
+    otros.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});
+    opts+='</optgroup>';
+  }
+  sel.innerHTML=opts;
+  actualizarPrecioCarrito();
+}
+
+function actualizarPrecioCarrito(){
   var sel=document.getElementById('np-prod');if(!sel)return;
   var opt=sel.options[sel.selectedIndex];
-  document.getElementById('np-precio').value=opt.dataset.precio;
-  var t=opt.dataset.turno;
-  if(['desayuno','almuerzo','cena'].indexOf(t)>=0)document.getElementById('np-turno').value=t;
-  calcTotal();
+  if(opt&&opt.dataset.precio){
+    document.getElementById('np-precio').value=opt.dataset.precio;
+  }
+  calcTotalCarrito();
 }
-function calcTotal(){
+
+function calcTotalCarrito(){
   var cant=parseFloat(document.getElementById('np-cant').value)||0;
   var precio=parseFloat(document.getElementById('np-precio').value)||0;
-  var el=document.getElementById('np-total');if(el)el.value=fmt(cant*precio);
 }
-function guardarVenta(){
+
+function agregarAlCarrito(){
   var sel=document.getElementById('np-prod');
+  if(!sel||!sel.value){showToast('Selecciona un producto',true);return;}
   var prod=null;for(var i=0;i<productos.length;i++){if(productos[i].id===sel.value){prod=productos[i];break;}}
+  if(!prod){showToast('Selecciona un producto',true);return;}
   var cant=parseFloat(document.getElementById('np-cant').value)||1;
   var precio=parseFloat(document.getElementById('np-precio').value)||0;
+  if(cant<=0||precio<=0){showToast('Cantidad y precio deben ser mayores a 0',true);return;}
+  // Si ya existe el mismo producto con mismo precio, sumar cantidad
+  var existe=carritoItems.findIndex(function(it){return it.prodId===prod.id&&it.precioUnit===precio;});
+  if(existe>=0){
+    carritoItems[existe].cantidad+=cant;
+    carritoItems[existe].subtotal=carritoItems[existe].cantidad*precio;
+  } else {
+    carritoItems.push({prodId:prod.id,nombre:prod.nombre,cantidad:cant,precioUnit:precio,subtotal:cant*precio});
+  }
+  // Reset selector
+  document.getElementById('np-prod').value='';
+  document.getElementById('np-cant').value='1';
+  document.getElementById('np-precio').value='';
+  renderCarrito();
+}
+
+function renderCarrito(){
+  var lista=document.getElementById('carrito-lista');
+  var totalBox=document.getElementById('carrito-total-box');
+  var totalTxt=document.getElementById('carrito-total-txt');
+  if(!lista)return;
+  if(carritoItems.length===0){
+    lista.innerHTML='<div style="text-align:center;color:#bbb;font-size:13px;padding:12px">Agrega productos arriba ↑</div>';
+    if(totalBox)totalBox.style.display='none';
+    return;
+  }
+  var total=carritoItems.reduce(function(a,it){return a+it.subtotal;},0);
+  var html='';
+  carritoItems.forEach(function(it,idx){
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #f0e8d8">';
+    html+='<div style="flex:1">';
+    html+='<div style="font-size:14px;font-weight:600">'+it.nombre+'</div>';
+    html+='<div style="font-size:12px;color:#aaa">'+it.cantidad+' × '+fmt(it.precioUnit)+'</div></div>';
+    html+='<div style="font-size:15px;font-weight:700;color:#0F6E56;min-width:60px;text-align:right">'+fmt(it.subtotal)+'</div>';
+    // Botones cantidad
+    html+='<div style="display:flex;align-items:center;gap:4px">';
+    html+='<button onclick="cambiarCant('+idx+',-1)" style="width:28px;height:28px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:16px">−</button>';
+    html+='<span style="min-width:24px;text-align:center;font-size:14px">'+it.cantidad+'</span>';
+    html+='<button onclick="cambiarCant('+idx+',1)" style="width:28px;height:28px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:16px">+</button>';
+    html+='<button onclick="quitarItem('+idx+')" style="width:28px;height:28px;border-radius:6px;border:1px solid #fdd;background:#fff;cursor:pointer;color:#cc3333;font-size:14px">✕</button>';
+    html+='</div></div>';
+  });
+  lista.innerHTML=html;
+  if(totalBox){totalBox.style.display='block';totalTxt.textContent=fmt(total);}
+}
+
+function cambiarCant(idx,delta){
+  if(!carritoItems[idx])return;
+  carritoItems[idx].cantidad+=delta;
+  if(carritoItems[idx].cantidad<=0){carritoItems.splice(idx,1);}
+  else{carritoItems[idx].subtotal=carritoItems[idx].cantidad*carritoItems[idx].precioUnit;}
+  renderCarrito();
+}
+
+function quitarItem(idx){
+  carritoItems.splice(idx,1);
+  renderCarrito();
+}
+
+function actualizarPrecio(){} // legacy compat
+function calcTotal(){} // legacy compat
+
+function guardarVenta(){
+  if(carritoItems.length===0){showToast('Agrega al menos un producto',true);return;}
   var turno=document.getElementById('np-turno').value;
   var fecha=document.getElementById('np-fecha').value||today();
   var obs=document.getElementById('np-obs').value;
-  var pago=document.getElementById('np-pago')?document.getElementById('np-pago').value:'efectivo';
-  if(!prod||cant<=0||precio<=0){showToast('Completa todos los campos',true);return;}
-  db.ref('ventas').push({producto:prod.nombre,prodId:prod.id,cantidad:cant,precioUnit:precio,total:cant*precio,turno:turno,fecha:fecha,hora:nowTime(),obs:obs,pago:pago,timestamp:new Date().toISOString()})
-    .then(function(){showToast('Venta registrada - '+fmt(cant*precio));showTab('dashboard');});
+  var pago=document.getElementById('np-pago').value;
+  var hora=nowTime();
+  var ts=new Date().toISOString();
+  var total=carritoItems.reduce(function(a,it){return a+it.subtotal;},0);
+  // Guardar cada item como venta separada (compatible con historial existente)
+  var promesas=carritoItems.map(function(it){
+    return db.ref('ventas').push({
+      producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,
+      precioUnit:it.precioUnit,total:it.subtotal,
+      turno:turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts
+    });
+  });
+  Promise.all(promesas).then(function(){
+    showToast('✓ Venta registrada — '+fmt(total));
+    carritoItems=[];
+    showTab('dashboard');
+  });
 }
 function eliminarVenta(id){
   if(!confirm('Eliminar esta venta?'))return;
