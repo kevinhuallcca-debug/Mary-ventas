@@ -244,7 +244,7 @@ function mesActual(){return today().slice(0,7)}
 function fmtDate(d){var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
 function fmt(n){return'S/ '+parseFloat(n).toFixed(2)}
 function turnoClass(t){return t==='desayuno'?'bd':t==='almuerzo'?'ba':t==='cena'?'bc':'bo'}
-function turnoLabel(t){return t.charAt(0).toUpperCase()+t.slice(1)}
+function turnoLabel(t){if(t==='bebidas')return '🥤 Bebidas';if(t==='desayuno')return '🌅 Desayuno';if(t==='almuerzo')return '☀️ Almuerzo';if(t==='cena')return '🌙 Cena';return t.charAt(0).toUpperCase()+t.slice(1);}
 function nowTime(){var n=new Date();return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0')}
 function initials(n){var p=n.trim().split(' ');return(p[0][0]+(p[1]?p[1][0]:'')).toUpperCase()}
 function getMes(){return filterMes||mesActual()}
@@ -960,11 +960,26 @@ function getTurnoAuto(){var h=new Date().getHours();return h<12?'desayuno':h<17?
 
 function renderFormProducto(onAdd){
   var turno=document.getElementById('np-turno')?document.getElementById('np-turno').value:getTurnoAuto();
+  // Filtrar: turno seleccionado + bebidas + otros (no mostrar otros turnos)
   var del_turno=productos.filter(function(p){return p.turno===turno;});
-  var otros=productos.filter(function(p){return p.turno!==turno;});
+  var bebidas=productos.filter(function(p){return p.turno==='bebidas';});
+  var otros=productos.filter(function(p){return p.turno==='otro';});
   var opts='<option value="">-- Elige producto --</option>';
-  if(del_turno.length){opts+='<optgroup label="'+turnoLabel(turno)+'">';del_turno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' ('+fmt(p.precio)+')</option>';});opts+='</optgroup>';}
-  if(otros.length){opts+='<optgroup label="Otros">';otros.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' ('+fmt(p.precio)+')</option>';});opts+='</optgroup>';}
+  if(del_turno.length){
+    opts+='<optgroup label="'+turnoLabel(turno)+'">';
+    del_turno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' ('+fmt(p.precio)+')</option>';});
+    opts+='</optgroup>';
+  }
+  if(bebidas.length){
+    opts+='<optgroup label="🥤 Bebidas">';
+    bebidas.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' ('+fmt(p.precio)+')</option>';});
+    opts+='</optgroup>';
+  }
+  if(otros.length){
+    opts+='<optgroup label="Otros">';
+    otros.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' ('+fmt(p.precio)+')</option>';});
+    opts+='</optgroup>';
+  }
   var html='<div class="field"><label>Agregar producto</label>';
   html+='<select id="np-prod" onchange="'+onAdd.replace('()','Auto()')+'" style="width:100%;border:1px solid #e0d5c5;border-radius:8px;padding:10px;font-size:14px;font-family:inherit">'+opts+'</select>';
   html+='</div>';
@@ -2203,7 +2218,7 @@ function renderProductos(){
   var html='<div class="card"><div class="sl">Agregar producto</div>';
   html+='<div class="g2"><div class="field"><label>Nombre</label><input type="text" id="pp-nom" placeholder="Ej: Arroz con leche"></div>';
   html+='<div class="field"><label>Precio (S/)</label><input type="number" id="pp-precio" placeholder="0.00" step="0.5"></div></div>';
-  html+='<div class="field"><label>Turno</label><select id="pp-turno"><option value="desayuno">Desayuno</option><option value="almuerzo" selected>Almuerzo</option><option value="cena">Cena</option><option value="otro">Otro</option></select></div>';
+  html+='<div class="field"><label>Turno</label><select id="pp-turno"><option value="desayuno">Desayuno</option><option value="almuerzo" selected>Almuerzo</option><option value="cena">Cena</option><option value="bebidas">🥤 Bebidas</option><option value="otro">Otro</option></select></div>';
   html+='<button class="btn" onclick="agregarProducto()">Agregar producto</button></div>';
   html+='<div class="card"><div class="sl">Lista de productos ('+productos.length+')</div>';
   if(productos.length===0){html+='<div class="empty">Sin productos</div>';}
