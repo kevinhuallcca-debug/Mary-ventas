@@ -2213,19 +2213,54 @@ function eliminarGasto(id){
   db.ref('gastos/'+id).remove().then(function(){showToast('Gasto eliminado');});
 }
 
+function turnoOpts(selected){
+  var cats=['desayuno','almuerzo','cena','bebidas','otro'];
+  var labels={'desayuno':'🌅 Desayuno','almuerzo':'☀️ Almuerzo','cena':'🌙 Cena','bebidas':'🥤 Bebidas','otro':'📦 Otro'};
+  return cats.map(function(c){return '<option value="'+c+'"'+(c===selected?' selected':'')+'>'+labels[c]+'</option>';}).join('');
+}
+
 function renderProductos(){
   var html='<div class="card"><div class="sl">Agregar producto</div>';
   html+='<div class="g2"><div class="field"><label>Nombre</label><input type="text" id="pp-nom" placeholder="Ej: Arroz con leche"></div>';
   html+='<div class="field"><label>Precio (S/)</label><input type="number" id="pp-precio" placeholder="0.00" step="0.5"></div></div>';
-  html+='<div class="field"><label>Turno</label><select id="pp-turno"><option value="desayuno">Desayuno</option><option value="almuerzo" selected>Almuerzo</option><option value="cena">Cena</option><option value="bebidas">🥤 Bebidas</option><option value="otro">Otro</option></select></div>';
+  html+='<div class="field"><label>Categoría</label><select id="pp-turno">'+turnoOpts('almuerzo')+'</select></div>';
   html+='<button class="btn" onclick="agregarProducto()">Agregar producto</button></div>';
+
+  // Agrupar por categoria
+  var cats=['desayuno','almuerzo','cena','bebidas','otro'];
+  var labels={'desayuno':'🌅 Desayuno','almuerzo':'☀️ Almuerzo','cena':'🌙 Cena','bebidas':'🥤 Bebidas','otro':'📦 Otro'};
   html+='<div class="card"><div class="sl">Lista de productos ('+productos.length+')</div>';
   if(productos.length===0){html+='<div class="empty">Sin productos</div>';}
-  else{productos.forEach(function(p){
-    html+='<div class="prod-row"><div><div class="rn">'+p.nombre+'<span class="badge '+turnoClass(p.turno)+'">'+turnoLabel(p.turno)+'</span></div></div>';
-    html+='<div style="display:flex;align-items:center;gap:8px"><input class="inp-sm" type="number" value="'+p.precio+'" step="0.5" onchange="editarPrecio(\''+p.id+'\',this.value)">';
-    html+='<button class="btnd" onclick="eliminarProducto(\''+p.id+'\')">x</button></div></div>';
-  });}
+  else{
+    cats.forEach(function(cat){
+      var grupo=productos.filter(function(p){return p.turno===cat;});
+      if(grupo.length===0)return;
+      html+='<div style="font-size:11px;font-weight:700;color:#8b0000;text-transform:uppercase;letter-spacing:1px;padding:10px 0 4px;border-top:1px solid #f0e8d8;margin-top:4px">'+labels[cat]+'</div>';
+      grupo.forEach(function(p){
+        html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #f0e8d8">';
+        html+='<div style="flex:1;font-size:14px;font-weight:600">'+p.nombre+'</div>';
+        // Precio editable
+        html+='<input class="inp-sm" type="number" value="'+p.precio+'" step="0.5" style="width:70px" onchange="editarPrecio(\''+p.id+'\',this.value)" title="Editar precio">';
+        // Categoria editable
+        html+='<select onchange="editarTurno(\''+p.id+'\',this.value)" style="border:1px solid #e0d5c5;border-radius:6px;padding:4px 6px;font-size:12px;font-family:inherit">'+turnoOpts(p.turno)+'</select>';
+        html+='<button class="btnd" onclick="eliminarProducto(\''+p.id+'\')">x</button>';
+        html+='</div>';
+      });
+    });
+    // Productos sin categoria conocida
+    var otros2=productos.filter(function(p){return cats.indexOf(p.turno)<0;});
+    if(otros2.length>0){
+      html+='<div style="font-size:11px;font-weight:700;color:#8b0000;text-transform:uppercase;letter-spacing:1px;padding:10px 0 4px">Sin categoría</div>';
+      otros2.forEach(function(p){
+        html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #f0e8d8">';
+        html+='<div style="flex:1;font-size:14px;font-weight:600">'+p.nombre+'</div>';
+        html+='<input class="inp-sm" type="number" value="'+p.precio+'" step="0.5" style="width:70px" onchange="editarPrecio(\''+p.id+'\',this.value)">';
+        html+='<select onchange="editarTurno(\''+p.id+'\',this.value)" style="border:1px solid #e0d5c5;border-radius:6px;padding:4px 6px;font-size:12px;font-family:inherit">'+turnoOpts(p.turno)+'</select>';
+        html+='<button class="btnd" onclick="eliminarProducto(\''+p.id+'\')">x</button>';
+        html+='</div>';
+      });
+    }
+  }
   html+='</div>';
   document.getElementById('productos').innerHTML=html;
 }
@@ -2243,6 +2278,9 @@ function eliminarProducto(id){
 function editarPrecio(id,val){
   var precio=parseFloat(val);if(!precio||precio<=0)return;
   db.ref('productos/'+id).update({precio:precio}).then(function(){showToast('Precio actualizado');});
+}
+function editarTurno(id,val){
+  db.ref('productos/'+id).update({turno:val}).then(function(){showToast('Categoría actualizada');});
 }
 </script>
 
