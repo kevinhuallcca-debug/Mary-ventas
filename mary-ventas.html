@@ -467,7 +467,22 @@ function renderEmpView(empId){
 
   var adEmp=adelantos.filter(function(a){return a.personalId===empId&&!a.liquidado&&(!ultimoPago||a.fecha>ultimoPago);});
   var totalAd=adEmp.reduce(function(a,x){return a+x.monto;},0);
-  var saldo=(emp.sueldo||0)-totalAd;
+
+  // Calcular ganado por dias con historial de sueldos
+  var sueldoDiaEmp=emp.sueldoDia||emp.sueldo||0;
+  var histSEmp=(emp.historialSueldos||[]).slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  function getSueldoEmp(fecha){
+    var s=sueldoDiaEmp;
+    for(var i=histSEmp.length-1;i>=0;i--){if(histSEmp[i].fecha<=fecha){s=histSEmp[i].monto;break;}}
+    return s;
+  }
+  var ganadoEmp=0;
+  diasT.forEach(function(f){
+    var s=getSueldoEmp(f);
+    var esMed=asisDesde.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
+    ganadoEmp+=esMed?s/2:s;
+  });
+  var saldo=ganadoEmp-totalAd;
 
   var html='<div class="emp-view">';
   html+='<div class="emp-profile-header">';
@@ -480,10 +495,10 @@ function renderEmpView(empId){
   html+='<div class="card"><div class="sl">Mi resumen</div>';
   if(ultimoPago){html+='<div style="font-size:12px;color:#0F6E56;margin-bottom:8px">Desde: '+fmtDate(ultimoPago)+'</div>';}
   html+='<div class="resumen-box">';
-  html+='<div class="resumen-row"><span>Sueldo base</span><span style="color:#0F6E56">'+fmt(emp.sueldo||0)+'</span></div>';
-  html+='<div class="resumen-row"><span>Dias trabajados</span><span>'+diasT.length+' dias</span></div>';
-  html+='<div class="resumen-row"><span>Medio tiempo</span><span style="color:#854F0B">'+diasMed+' dias</span></div>';
-  html+='<div class="resumen-row"><span>Faltas</span><span style="color:#A32D2D">'+diasF.length+' dias</span></div>';
+  html+='<div class="resumen-row"><span>Sueldo por día</span><span style="color:#0F6E56">'+fmt(sueldoDiaEmp)+'/día</span></div>';
+  html+='<div class="resumen-row"><span>Dias trabajados</span><span>'+diasT.length+' días · '+fmt(ganadoEmp)+'</span></div>';
+  html+='<div class="resumen-row"><span>Medio tiempo</span><span style="color:#854F0B">'+diasMed+' días (½ sueldo)</span></div>';
+  html+='<div class="resumen-row"><span>Faltas</span><span style="color:#A32D2D">'+diasF.length+' días</span></div>';
   html+='<div class="resumen-row"><span>Adelantos</span><span style="color:#854F0B">- '+fmt(totalAd)+'</span></div>';
   html+='<div class="resumen-row total"><span>Saldo a cobrar</span><span style="color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</span></div>';
   html+='</div></div>';
