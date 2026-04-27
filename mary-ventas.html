@@ -1039,6 +1039,16 @@ function agregarAMesaAuto(){
   sel.value='';
 }
 
+function autoAgregarProducto(fnName){
+  var sel=document.getElementById('np-prod');
+  if(!sel||!sel.value)return;
+  // Set precio from selected product
+  actualizarPrecioCarrito();
+  // Call the add function
+  if(fnName==='agregarAlCarrito') agregarAlCarrito();
+  else if(fnName==='agregarAMesa') agregarAMesa();
+}
+
 function agregarAlCarrito(){
   var sel=document.getElementById('np-prod');
   if(!sel||!sel.value){showToast('Selecciona un producto',true);return;}
