@@ -709,7 +709,14 @@ function startListeners(){
     mesas={};
     snap.forEach(function(c){
       var m=c.val();
-      if(m){mesas[c.key]=m;}
+      if(m){
+        // Firebase guarda arrays como objetos - convertir
+        if(m.items&&!Array.isArray(m.items)){
+          m.items=Object.values(m.items);
+        }
+        if(!m.items)m.items=[];
+        mesas[c.key]=m;
+      }
     });
     if(activeTab==='nueva')renderNueva();
   });
@@ -995,8 +1002,9 @@ function renderModoMesas(){
     html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">';
     mesaIds.forEach(function(mid){
       var m=mesas[mid];
-      var tot=m.items.reduce(function(a,it){return a+it.subtotal;},0);
-      var nitems=m.items.reduce(function(a,it){return a+it.cantidad;},0);
+      var mitems=Array.isArray(m.items)?m.items:[];
+      var tot=mitems.reduce(function(a,it){return a+it.subtotal;},0);
+      var nitems=mitems.reduce(function(a,it){return a+it.cantidad;},0);
       html+='<button onclick="abrirMesa(\''+mid+'\')" style="background:'+(mesaActiva===mid?'#8b0000':'#f9f5ef')+';color:'+(mesaActiva===mid?'#fff':'#333')+';border:1.5px solid '+(mesaActiva===mid?'#8b0000':'#e0d5c5')+';border-radius:12px;padding:12px 8px;cursor:pointer;text-align:center;font-family:inherit">';
       html+='<div style="font-size:16px;font-weight:700">'+m.nombre+'</div>';
       html+='<div style="font-size:11px;opacity:0.8">'+nitems+' items</div>';
@@ -1013,7 +1021,8 @@ function renderModoMesas(){
   // Panel de mesa activa
   if(mesaActiva&&mesas[mesaActiva]){
     var m=mesas[mesaActiva];
-    var tot=m.items.reduce(function(a,it){return a+it.subtotal;},0);
+    var mitems=Array.isArray(m.items)?m.items:[];
+    var tot=mitems.reduce(function(a,it){return a+it.subtotal;},0);
     html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
     html+='<div class="sl" style="margin:0">'+m.nombre+'</div>';
     html+='<button onclick="cerrarMesaSinPagar()" style="background:none;border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:#aaa">Cancelar</button></div>';
@@ -1027,10 +1036,10 @@ function renderModoMesas(){
     html+=renderFormProducto('agregarAMesa()');
     // Lista items de la mesa
     html+='<div style="margin-top:12px">';
-    if(m.items.length===0){
+    if(mitems.length===0){
       html+='<div style="text-align:center;color:#bbb;font-size:13px;padding:12px">Sin productos aún</div>';
     } else {
-      m.items.forEach(function(it,idx){
+      mitems.forEach(function(it,idx){
         html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #f0e8d8">';
         html+='<div style="flex:1"><div style="font-size:14px;font-weight:600">'+it.nombre+'</div>';
         html+='<div style="font-size:12px;color:#aaa">'+it.cantidad+' × '+fmt(it.precioUnit)+'</div></div>';
@@ -1048,7 +1057,7 @@ function renderModoMesas(){
     html+='<div style="margin-top:14px;background:#f0faf5;border-radius:10px;padding:14px;text-align:center">';
     html+='<div style="font-size:13px;color:#555">Total '+m.nombre+'</div>';
     html+='<div style="font-size:28px;font-weight:700;color:#0F6E56">'+fmt(tot)+'</div></div>';
-    html+='<button onclick="cobrarMesa()" style="width:100%;margin-top:10px;background:#0F6E56;color:#fff;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:700;cursor:pointer">💰 Cobrar '+m.nombre+'</button>';
+    if(mitems.length>0){html+='<button onclick="cobrarMesa()" style="width:100%;margin-top:10px;background:#0F6E56;color:#fff;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:700;cursor:pointer">💰 Cobrar '+m.nombre+'</button>';}
     html+='</div>';
   }
   cont.innerHTML=html;
@@ -1123,7 +1132,8 @@ function cerrarMesaSinPagar(){
 function cobrarMesa(){
   if(!mesaActiva||!mesas[mesaActiva])return;
   var m=mesas[mesaActiva];
-  if(!m.items||m.items.length===0){showToast('Agrega al menos un producto',true);return;}
+  var mitems2=Array.isArray(m.items)?m.items:(m.items?Object.values(m.items):[]);
+  if(mitems2.length===0){showToast('Agrega al menos un producto',true);return;}
   // Leer turno y pago del formulario si existen
   var turnoEl=document.getElementById('np-turno');
   var pagoEl=document.getElementById('np-pago');
@@ -1132,9 +1142,9 @@ function cobrarMesa(){
   var fecha=today();
   var hora=nowTime();
   var ts=new Date().toISOString();
-  var total=m.items.reduce(function(a,it){return a+it.subtotal;},0);
+  var total=mitems2.reduce(function(a,it){return a+it.subtotal;},0);
   var obs=m.nombre;
-  var promesas=m.items.map(function(it){
+  var promesas=mitems2.map(function(it){
     return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts});
   });
   Promise.all(promesas).then(function(){
