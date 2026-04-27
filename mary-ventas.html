@@ -588,7 +588,7 @@ function renderEmpView(empId){
   var todaAsis=asistencias.filter(function(a){return a.personalId===empId;});
   var asisDesde=ultimoPago?todaAsis.filter(function(a){return a.fecha>ultimoPago;}):todaAsis;
 
-  var diasT=[];asisDesde.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
+  var diasT=[];asisDesde.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo'||a.estado==='descanso pagado')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
   var diasF=[];asisDesde.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
   var diasMed=asisDesde.filter(function(a){return a.estado==='medio tiempo';}).length;
 
@@ -607,6 +607,7 @@ function renderEmpView(empId){
   diasT.forEach(function(f){
     var s=getSueldoEmp(f);
     var esMed=asisDesde.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
+    var esDesc=asisDesde.some(function(a){return a.fecha===f&&a.estado==='descanso pagado';});
     ganadoEmp+=esMed?s/2:s;
   });
   var saldo=ganadoEmp-totalAd;
@@ -658,11 +659,12 @@ function renderEmpView(empId){
       var isT=ultDs&&ultDs.estado==='asistio';
       var isMed=ultDs&&ultDs.estado==='medio tiempo';
       var isF=ultDs&&ultDs.estado==='no asistio';
+      var isDesc=ultDs&&ultDs.estado==='descanso pagado';
       var isToday=ds===today();
-      var bg=antesDelPago?(isT?'#2d6a4f':isMed?'#52b788':isF?'#95d5b2':'#e8e4de'):futura?'#f9f7f4':isT?'#185FA5':isMed?'#854F0B':isF?'#A32D2D':'#f0ede8';
-      var color=antesDelPago?(isT||isMed||isF?'#fff':'#ccc'):futura?'#ccc':(isT||isMed||isF)?'#fff':'#888';
+      var bg=antesDelPago?(isT?'#2d6a4f':isMed?'#52b788':isF?'#95d5b2':isDesc?'#9b72c0':'#e8e4de'):futura?'#f9f7f4':isT?'#185FA5':isMed?'#854F0B':isF?'#A32D2D':isDesc?'#6B3FA0':'#f0ede8';
+      var color=antesDelPago?(isT||isMed||isF||isDesc?'#fff':'#ccc'):futura?'#ccc':(isT||isMed||isF||isDesc)?'#fff':'#888';
       var border=isToday?'2px solid #8b0000':'2px solid transparent';
-      var labelDs=ultDs?(ultDs.estado==='asistio'?'✅ Asistió':ultDs.estado==='medio tiempo'?'🟡 Medio tiempo':ultDs.estado==='no asistio'?'❌ No asistió':''):'Sin registro';
+      var labelDs=ultDs?(ultDs.estado==='asistio'?'✅ Asistió':ultDs.estado==='medio tiempo'?'🟡 Medio tiempo':ultDs.estado==='no asistio'?'❌ No asistió':ultDs.estado==='descanso pagado'?'🟣 Descanso pagado':''):'Sin registro';
       var titleDs=(antesDelPago?'[Cancelado] ':'')+labelDs;
       html+='<div title="'+titleDs+'" style="text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+';cursor:default">'+d+'</div>';
     }
@@ -825,7 +827,7 @@ function renderDashboard(){
   var byT=function(t){return hoy.filter(function(v){return v.turno===t}).reduce(function(a,v){return a+v.total},0)};
   var d=byT('desayuno'),al=byT('almuerzo'),c=byT('cena');var maxBar=Math.max(d,al,c,1);
   var asisHoy=asistencias.filter(function(a){return a.fecha===today()});
-  var presIds=[];asisHoy.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&presIds.indexOf(a.personalId)<0)presIds.push(a.personalId)});
+  var presIds=[];asisHoy.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo'||a.estado==='descanso pagado')&&presIds.indexOf(a.personalId)<0)presIds.push(a.personalId)});
   var html='<div class="metrics">';
   html+='<div class="met"><div class="ml">Total hoy</div><div class="mv g">'+fmt(total)+'</div></div>';
   html+='<div class="met"><div class="ml">Ventas</div><div class="mv">'+hoy.length+'</div></div>';
@@ -1542,7 +1544,7 @@ function renderPersonalList(){
       for(var i=histSL.length-1;i>=0;i--){if(histSL[i].fecha<=fecha){s=histSL[i].monto;break;}}
       return s;
     }
-    var diasTL=[];asisEmpL.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasTL.indexOf(a.fecha)<0)diasTL.push(a.fecha);});
+    var diasTL=[];asisEmpL.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo'||a.estado==='descanso pagado')&&diasTL.indexOf(a.fecha)<0)diasTL.push(a.fecha);});
     var ganadoL=0;
     diasTL.forEach(function(f){
       var s=getSueldoDiaL(f);
@@ -1557,7 +1559,7 @@ function renderPersonalList(){
     if(ult){dc=ult.estado==='entrada'?'dot-in':ult.estado==='salida'?'dot-out':'dot-abs';}
     // Estado asistencia hoy
     var estadoHoy=ult?ult.estado:null;
-    var dotColor=estadoHoy==='asistio'?'#185FA5':estadoHoy==='medio tiempo'?'#854F0B':estadoHoy==='no asistio'?'#A32D2D':'#ccc';
+    var dotColor=estadoHoy==='asistio'?'#185FA5':estadoHoy==='medio tiempo'?'#854F0B':estadoHoy==='no asistio'?'#A32D2D':estadoHoy==='descanso pagado'?'#6B3FA0':'#ccc';
     var estadoLabel=estadoHoy?estadoHoy:'sin marcar';
     html+='<div style="border-bottom:0.5px solid #f0e8d8;padding:12px 0">';
     // Fila superior: avatar + nombre + saldo
@@ -1574,6 +1576,7 @@ function renderPersonalList(){
     html+='<button onclick="marcarAsisDirecto(\''+p.id+'\',\''+p.nombre+'\',\'asistio\')" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='asistio'?'#185FA5':'#ddd')+';background:'+(estadoHoy==='asistio'?'#185FA5':'#fff')+';color:'+(estadoHoy==='asistio'?'#fff':'#555')+';font-size:12px;cursor:pointer">✓ Asistió</button>';
     html+='<button onclick="marcarAsisDirecto(\''+p.id+'\',\''+p.nombre+'\',\'medio tiempo\')" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='medio tiempo'?'#854F0B':'#ddd')+';background:'+(estadoHoy==='medio tiempo'?'#854F0B':'#fff')+';color:'+(estadoHoy==='medio tiempo'?'#fff':'#555')+';font-size:12px;cursor:pointer">◑ Medio</button>';
     html+='<button onclick="marcarAsisDirecto(\''+p.id+'\',\''+p.nombre+'\',\'no asistio\')" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='no asistio'?'#A32D2D':'#ddd')+';background:'+(estadoHoy==='no asistio'?'#A32D2D':'#fff')+';color:'+(estadoHoy==='no asistio'?'#fff':'#555')+';font-size:12px;cursor:pointer">✕ Faltó</button>';
+    html+='<button onclick="marcarAsisDirecto(\''+p.id+'\',\''+p.nombre+'\',\'descanso pagado\')" style="flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid '+(estadoHoy==='descanso pagado'?'#6B3FA0':'#ddd')+';background:'+(estadoHoy==='descanso pagado'?'#6B3FA0':'#fff')+';color:'+(estadoHoy==='descanso pagado'?'#fff':'#555')+';font-size:12px;cursor:pointer">🟣 Desc.</button>';
     html+='<button onclick="openEmp(\''+p.id+'\')" style="padding:7px 10px;border-radius:8px;border:1.5px solid #ddd;background:#fff;color:#555;font-size:12px;cursor:pointer">Ver →</button>';
     html+='</div></div>';
   });}
@@ -1632,7 +1635,7 @@ function renderSubAsistencia(emp,mes){
   var asisDesde=ultimoPago?todaAsis.filter(function(a){return a.fecha>ultimoPago;}):todaAsis;
 
   // Dias unicos trabajados/faltas DESDE ultimo pago
-  var diasT=[];asisDesde.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
+  var diasT=[];asisDesde.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo'||a.estado==='descanso pagado')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
   var diasF=[];asisDesde.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
   var diasMed=asisDesde.filter(function(a){return a.estado==='medio tiempo';}).length;
 
@@ -1681,15 +1684,16 @@ function renderSubAsistencia(emp,mes){
       var isT=ultDs&&(ultDs.estado==='asistio');
       var isMed=ultDs&&ultDs.estado==='medio tiempo';
       var isF=ultDs&&ultDs.estado==='no asistio';
+      var isDesc=ultDs&&ultDs.estado==='descanso pagado';
       var isToday=ds===today();
       var futura=ds>today();
-      var bg=(antesDelPago||antesDelInicio)?(isT?'#2d6a4f':isMed?'#52b788':isF?'#95d5b2':'#e8e4de'):futura?'#f9f7f4':isT?'#185FA5':isMed?'#854F0B':isF?'#A32D2D':'#f0ede8';
-      var color=(antesDelPago||antesDelInicio)?(isT||isMed||isF?'#fff':'#ccc'):futura?'#ccc':(isT||isMed||isF)?'#fff':'#888';
+      var bg=(antesDelPago||antesDelInicio)?(isT?'#2d6a4f':isMed?'#52b788':isF?'#95d5b2':isDesc?'#9b72c0':'#e8e4de'):futura?'#f9f7f4':isT?'#185FA5':isMed?'#854F0B':isF?'#A32D2D':isDesc?'#6B3FA0':'#f0ede8';
+      var color=(antesDelPago||antesDelInicio)?(isT||isMed||isF||isDesc?'#fff':'#ccc'):futura?'#ccc':(isT||isMed||isF||isDesc)?'#fff':'#888';
       var border=isToday?'2px solid #8b0000':'2px solid transparent';
       var clickable=!antesDelPago&&!futura;
       var dataAttrs=clickable?' data-empid="'+emp.id+'" data-empnombre="'+emp.nombre+'" data-fecha="'+ds+'" onclick="abrirModalAsisDt(this)"':'';
       var cursor=clickable?'cursor:pointer':'cursor:default';
-      var labelDsAdmin=ultDs?(ultDs.estado==='asistio'?'✅ Asistió':ultDs.estado==='medio tiempo'?'🟡 Medio tiempo':ultDs.estado==='no asistio'?'❌ No asistió':''):'Sin registro';
+      var labelDsAdmin=ultDs?(ultDs.estado==='asistio'?'✅ Asistió':ultDs.estado==='medio tiempo'?'🟡 Medio tiempo':ultDs.estado==='no asistio'?'❌ No asistió':ultDs.estado==='descanso pagado'?'🟣 Descanso pagado':''):'Sin registro';
       var titleDsAdmin=((antesDelPago||antesDelInicio)?'[Cancelado] ':'')+labelDsAdmin;
       html+='<div'+dataAttrs+' title="'+titleDsAdmin+'" style="'+cursor+';text-align:center;padding:5px 2px;border-radius:6px;background:'+bg+';color:'+color+';font-size:12px;border:'+border+'">'+d+'</div>';
     }
@@ -1786,7 +1790,7 @@ function renderSubLiquidacion(emp,mes){
   var asisTotal=asistencias.filter(function(a){
     return a.personalId===emp.id&&(!desdeFecha||a.fecha>desdeFecha);
   });
-  var diasT=[];asisTotal.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
+  var diasT=[];asisTotal.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo'||a.estado==='descanso pagado')&&diasT.indexOf(a.fecha)<0)diasT.push(a.fecha);});
   var diasF=[];asisTotal.forEach(function(a){if(a.estado==='no asistio'&&diasF.indexOf(a.fecha)<0)diasF.push(a.fecha);});
   var diasMed=asisTotal.filter(function(a){return a.estado==='medio tiempo';}).length;
 
@@ -2312,6 +2316,7 @@ function editarTurno(id,val){
       <button onclick="confirmarAsis('asistio')" style="background:#185FA5;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;font-family:inherit">✓ Asistio</button>
       <button onclick="confirmarAsis('medio tiempo')" style="background:#854F0B;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;font-family:inherit">◑ Medio tiempo</button>
       <button onclick="confirmarAsis('no asistio')" style="background:#A32D2D;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;font-family:inherit">✕ No asistio</button>
+      <button onclick="confirmarAsis('descanso pagado')" style="background:#6B3FA0;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;font-family:inherit">🟣 Descanso pagado</button>
       <button onclick="cerrarModalAsis()" style="background:#f0ede8;color:#555;border:none;border-radius:10px;padding:11px;font-size:14px;cursor:pointer;font-family:inherit">Cancelar</button>
     </div>
   </div>
