@@ -220,6 +220,8 @@ var firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 var auth = firebase.auth();
+// No guardar sesion entre cierres de navegador
+auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 var db = firebase.database();
 
 var currentUser = null; // { rol: 'admin'|'empleado', personalId, nombre }
@@ -254,15 +256,16 @@ function showToast(msg,error){
 }
 
 // ── AUTH ─────────────────────────────────────────────────────
+// Solo verificar si hay sesion activa en ESTA pestaña (SESSION persistence)
 auth.onAuthStateChanged(function(user){
   if(user){
-    // Admin autenticado
+    // Sesion activa en esta pestaña — entrar directo
     currentUser={rol:'admin',nombre:'Admin'};
     startListeners();
-    registrarSesion();
+    if(!sessionId)registrarSesion();
     showAdminApp();
   } else {
-    // No autenticado — mostrar login
+    // Sin sesion — mostrar login siempre
     document.getElementById('loader').style.display='none';
     showLoginScreen();
   }
@@ -452,6 +455,7 @@ function registrarSesion(){
   // Auto-limpiar al cerrar ventana
   window.addEventListener('beforeunload',function(){
     db.ref('sesiones/'+sessionId).remove();
+    // Firebase SESSION persistence se limpia sola al cerrar la pestaña
   });
   // Escuchar si esta sesion fue cerrada remotamente
   db.ref('sesiones/'+sessionId+'/activa').on('value',function(snap){
