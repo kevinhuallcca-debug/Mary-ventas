@@ -320,7 +320,17 @@ function loginEmpleado(){
   if(emp.pin.toString()!==pin.toString()){document.getElementById('login-error').textContent='PIN incorrecto';return;}
   currentUser={rol:'empleado',personalId:emp.id,nombre:emp.nombre};
   document.getElementById('login-screen').style.display='none';
-  showEmpApp(emp);
+  startListeners();
+  // Esperar que Firebase cargue los datos antes de mostrar
+  var empRef=emp;
+  var intentos=0;
+  var check=setInterval(function(){
+    intentos++;
+    if(personal.length>0||intentos>20){
+      clearInterval(check);
+      showEmpApp(empRef);
+    }
+  },150);
 }
 
 function loginCajero(){
@@ -728,7 +738,12 @@ function startListeners(){
   db.ref('personal').on('value',function(snap){
     personal=[];snap.forEach(function(c){personal.push(Object.assign({id:c.key},c.val()))});
     personal.sort(function(a,b){return a.nombre.localeCompare(b.nombre)});
-    migrarSueldoExistentes();;
+    migrarSueldoExistentes();
+    // Si hay un empleado logueado, refrescar su vista
+    if(currentUser&&currentUser.rol==='empleado'){
+      var empActual=personal.find(function(p){return p.id===currentUser.personalId;});
+      if(empActual)renderEmpView(empActual.id);
+    };
     render();
     // Actualizar select de empleados en login
     var sel=document.getElementById('emp-select');
