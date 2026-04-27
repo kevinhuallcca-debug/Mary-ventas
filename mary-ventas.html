@@ -1062,7 +1062,7 @@ function renderPersonalList(){
     var mes=getMes();
     var totalAd=adelantos.filter(function(a){return a.personalId===p.id&&a.fecha.slice(0,7)===mes&&!a.liquidado}).reduce(function(a,x){return a+x.monto},0);
     var totalPa=pagos.filter(function(a){return a.personalId===p.id&&a.fecha.slice(0,7)===mes}).reduce(function(a,x){return a+x.monto},0);
-    var saldo=(p.sueldo||0)-totalAd-totalPa;
+    var sueldoDia=p.sueldoDia||p.sueldo||0; var saldo=sueldoDia-totalAd-totalPa;
     var asisHoy=asistencias.filter(function(a){return a.personalId===p.id&&a.fecha===today()});
     var ult=asisHoy.length?asisHoy[asisHoy.length-1]:null;
     var dc='dot-none';
@@ -1091,7 +1091,7 @@ function renderPersonalList(){
   html+='<div class="card"><div class="sl">Agregar empleado</div>';
   html+='<div class="g2"><div class="field"><label>Nombre completo</label><input type="text" id="per-nom" placeholder="Ej: Juan Perez"></div>';
   html+='<div class="field"><label>Cargo</label><select id="per-cargo"><option value="Cocinero">Cocinero</option><option value="Mesero">Mesero</option><option value="Cajero">Cajero</option><option value="Ayudante">Ayudante</option><option value="Otro">Otro</option></select></div></div>';
-  html+='<div class="g2"><div class="field"><label>Sueldo base (S/)</label><input type="number" id="per-sueldo" placeholder="1200" step="50"></div>';
+  html+='<div class="g2"><div class="field"><label>Sueldo por día (S/)</label><input type="number" id="per-sueldo" placeholder="50" step="5"></div>';
   html+='<div class="field"><label>PIN de acceso (4 digitos)</label><input type="number" id="per-pin" placeholder="Ej: 1234" maxlength="4"></div></div>';
   html+='<div style="background:#f0f8ff;border:1px solid #b8d4f0;border-radius:8px;padding:10px;font-size:12px;color:#185FA5;margin-bottom:10px">El PIN permite al empleado ver sus datos. Solo tu puedes modificarlos.</div>';
   html+='<button class="btn" onclick="agregarPersonal()">Agregar empleado</button></div>';
@@ -1301,10 +1301,43 @@ function renderSubLiquidacion(emp,mes){
   // Adelantos pendientes desde ultimo pago
   var adEmp=adelantos.filter(function(a){return a.personalId===emp.id&&!a.liquidado&&(!desdeFecha||a.fecha>desdeFecha);});
   var totalAd=adEmp.reduce(function(a,x){return a+x.monto;},0);
-  var sueldo=emp.sueldo||0;
-  var saldo=sueldo-totalAd;
+  var sueldoDia=emp.sueldoDia||emp.sueldo||0;
+
+  // Calcular ganado por dias (cada dia puede tener sueldo diferente si hubo aumento)
+  // Usamos historial de sueldos si existe
+  var histSueldos=(emp.historialSueldos||[]).slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  function getSueldoParaDia(fecha){
+    var s=sueldoDia;
+    for(var i=histSueldos.length-1;i>=0;i--){
+      if(histSueldos[i].fecha<=fecha){s=histSueldos[i].monto;break;}
+    }
+    return s;
+  }
+  var ganado=0;
+  diasT.forEach(function(f){
+    var s=getSueldoParaDia(f);
+    // medio tiempo = mitad
+    var esMedio=asisTotal.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
+    ganado+=esMedio?s/2:s;
+  });
+  var saldo=ganado-totalAd;
 
   var html='<div class="card"><div class="sl">Liquidacion</div>';
+
+  // Boton configurar sueldo por dia
+  html+='<div style="background:#f9f5ef;border-radius:10px;padding:12px;margin-bottom:12px">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+  html+='<span style="font-size:13px;font-weight:600;color:#555">Sueldo por día</span>';
+  html+='<span style="font-size:20px;font-weight:700;color:#0F6E56">'+fmt(sueldoDia)+'/día</span></div>';
+  html+='<div style="display:flex;gap:8px">';
+  html+='<input type="number" id="nuevo-sueldo-'+emp.id+'" placeholder="Nuevo monto" step="5" min="0" style="flex:1;border:1px solid #e0d5c5;border-radius:8px;padding:9px;font-size:14px;font-family:inherit">';
+  html+='<button onclick="actualizarSueldoDia(\''+emp.id+'\')" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:9px 14px;cursor:pointer;font-size:13px;white-space:nowrap">Actualizar</button></div>';
+  if(histSueldos.length>0){
+    html+='<div style="margin-top:8px;font-size:11px;color:#aaa">';
+    var last=histSueldos[histSueldos.length-1];
+    html+='Último cambio: '+fmtDate(last.fecha)+' → '+fmt(last.monto)+'/día</div>';
+  }
+  html+='</div>';
 
   // Info desde cuando se cuenta
   if(desdeFecha){
@@ -1316,12 +1349,12 @@ function renderSubLiquidacion(emp,mes){
   }
 
   html+='<div class="resumen-box">';
-  html+='<div class="resumen-row"><span>Sueldo base</span><span style="color:#0F6E56">'+fmt(sueldo)+'</span></div>';
-  html+='<div class="resumen-row"><span>Dias trabajados</span><span>'+diasT.length+' dias</span></div>';
-  html+='<div class="resumen-row"><span>Medio tiempo</span><span style="color:#854F0B">'+diasMed+' dias</span></div>';
-  html+='<div class="resumen-row"><span>Faltas</span><span style="color:#A32D2D">'+diasF.length+' dias</span></div>';
+  html+='<div class="resumen-row"><span>Dias trabajados</span><span>'+diasT.length+' días · '+fmt(ganado)+'</span></div>';
+  html+='<div class="resumen-row"><span>Medio tiempo</span><span style="color:#854F0B">'+diasMed+' días (½ sueldo)</span></div>';
+  html+='<div class="resumen-row"><span>Faltas</span><span style="color:#A32D2D">'+diasF.length+' días</span></div>';
   html+='<div class="resumen-row"><span>Adelantos efectivo</span><span style="color:#185FA5">- '+fmt(adEmp.filter(function(a){return a.tipo==='efectivo';}).reduce(function(a,x){return a+x.monto;},0))+'</span></div>';
   html+='<div class="resumen-row"><span>Adelantos productos</span><span style="color:#993556">- '+fmt(adEmp.filter(function(a){return a.tipo==='producto';}).reduce(function(a,x){return a+x.monto;},0))+'</span></div>';
+  html+='<div class="resumen-row total"><span>TOTAL GANADO</span><span style="color:#0F6E56">'+fmt(ganado)+'</span></div>';
   html+='<div class="resumen-row total"><span>SALDO A PAGAR</span><span style="color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</span></div></div>';
 
   // Botón PAGADO HASTA HOY
@@ -1351,6 +1384,18 @@ function renderSubLiquidacion(emp,mes){
   return html;
 }
 
+function actualizarSueldoDia(empId){
+  var inp=document.getElementById('nuevo-sueldo-'+empId);
+  var monto=parseFloat(inp.value);
+  if(!monto||monto<=0){showToast('Ingresa un monto válido',true);return;}
+  var emp=personal.find(function(p){return p.id===empId;});
+  if(!emp){return;}
+  var hist=emp.historialSueldos||[];
+  hist.push({fecha:today(),monto:monto,hora:new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})});
+  db.ref('personal/'+empId).update({sueldoDia:monto,historialSueldos:hist})
+    .then(function(){showToast('Sueldo actualizado a '+fmt(monto)+'/día');inp.value='';renderEmpDetail();});
+}
+
 function agregarPersonal(){
   var nom=document.getElementById('per-nom').value.trim();
   var cargo=document.getElementById('per-cargo').value;
@@ -1358,7 +1403,7 @@ function agregarPersonal(){
   var pin=document.getElementById('per-pin').value.trim();
   if(!nom){showToast('Escribe el nombre',true);return;}
   if(!pin||pin.length<4){showToast('El PIN debe tener al menos 4 digitos',true);return;}
-  db.ref('personal').push({nombre:nom,cargo:cargo,sueldo:sueldo,pin:pin})
+  db.ref('personal').push({nombre:nom,cargo:cargo,sueldo:sueldo,sueldoDia:sueldo,historialSueldos:[{fecha:today(),monto:sueldo,hora:new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}],pin:pin})
     .then(function(){showToast('Empleado agregado');});
 }
 function cambiarPin(id){
