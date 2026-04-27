@@ -995,17 +995,30 @@ function renderModoRapido(){
 
 function actualizarOptsProducto(){
   var sel=document.getElementById('np-prod');if(!sel)return;
-  var cats=['desayuno','almuerzo','cena','bebidas','otro'];
+  var turno=document.getElementById('np-turno')?document.getElementById('np-turno').value:'';
   var opts='<option value="">-- Elige producto --</option>';
-  cats.forEach(function(cat){
-    var grupo=productos.filter(function(p){return p.turno===cat;});
-    if(grupo.length===0)return;
-    opts+='<optgroup label="'+turnoLabel(cat)+'">';
-    grupo.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});
+  var delTurno=productos.filter(function(p){return p.turno===turno;});
+  if(delTurno.length){
+    opts+='<optgroup label="'+turnoLabel(turno)+'">';
+    delTurno.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});
     opts+='</optgroup>';
-  });
-  var desconocidos=productos.filter(function(p){return cats.indexOf(p.turno)<0;});
-  if(desconocidos.length){opts+='<optgroup label="Otros">';desconocidos.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});opts+='</optgroup>';}
+  }
+  if(turno!=='bebidas'){
+    var bebidas=productos.filter(function(p){return p.turno==='bebidas';});
+    if(bebidas.length){
+      opts+='<optgroup label="🥤 Bebidas">';
+      bebidas.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});
+      opts+='</optgroup>';
+    }
+  }
+  if(turno!=='otro'){
+    var otros=productos.filter(function(p){return p.turno==='otro';});
+    if(otros.length){
+      opts+='<optgroup label="📦 Otro">';
+      otros.forEach(function(p){opts+='<option value="'+p.id+'" data-precio="'+p.precio+'">'+p.nombre+' — '+fmt(p.precio)+'</option>';});
+      opts+='</optgroup>';
+    }
+  }
   sel.innerHTML=opts;actualizarPrecioCarrito();
 }
 
