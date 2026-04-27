@@ -947,9 +947,8 @@ var posBusqueda='';
 
 function renderNueva(){
   var cont=document.getElementById('nueva');
-  // Layout POS: dos columnas
   cont.innerHTML='<div id="pos-wrap" style="display:flex;gap:0;height:calc(100vh - 130px);overflow:hidden"></div>';
-  renderPOS();
+  setTimeout(function(){renderPOS();},0);
 }
 
 function renderPOS(){
