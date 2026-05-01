@@ -818,60 +818,128 @@ function renderDashboard(){
   var hoy=ventas.filter(function(v){return v.fecha===today()});
   var total=hoy.reduce(function(a,v){return a+v.total},0);
   var byT=function(t){return hoy.filter(function(v){return v.turno===t}).reduce(function(a,v){return a+v.total},0)};
-  var d=byT('desayuno'),al=byT('almuerzo'),c=byT('cena');var maxBar=Math.max(d,al,c,1);
+  var d=byT('desayuno'),al=byT('almuerzo'),ce=byT('cena');
+  var maxBar=Math.max(d,al,ce,1);
   var asisHoy=asistencias.filter(function(a){return a.fecha===today()});
   var presIds=[];asisHoy.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo'||a.estado==='descanso pagado')&&presIds.indexOf(a.personalId)<0)presIds.push(a.personalId)});
-  var html='<div class="metrics">';
-  html+='<div class="met"><div class="ml">Total hoy</div><div class="mv g">'+fmt(total)+'</div></div>';
-  html+='<div class="met"><div class="ml">Ventas</div><div class="mv">'+hoy.length+'</div></div>';
-  html+='<div class="met"><div class="ml">Personal</div><div class="mv">'+presIds.length+'/'+personal.length+'</div></div>';
-  html+='<div class="met"><div class="ml">Fecha</div><div class="mv sm">'+fmtDate(today())+'</div></div>';
+  var gastosHoy=gastos.filter(function(g){return g.fecha===today();});
+  var totalGastosHoy=gastosHoy.reduce(function(a,g){return a+g.monto;},0);
+  var totalYapeHoy=hoy.filter(function(v){return v.pago==='yape';}).reduce(function(a,v){return a+v.total;},0);
+  var totalEfectivoHoy=hoy.filter(function(v){return v.pago!=='yape';}).reduce(function(a,v){return a+v.total;},0);
+  var ganancia=total-totalGastosHoy;
+  var aperHoy=cajaAperturas.filter(function(a){return a.fecha===today();});
+  var aper=aperHoy.length?aperHoy[aperHoy.length-1]:null;
+  var mesasAbiertas=Object.keys(mesas).filter(function(k){
+    var m=mesas[k];var items=Array.isArray(m.items)?m.items:(m.items?Object.values(m.items):[]);
+    return items.filter(function(it){return !it.cobrado;}).length>0;
+  });
+
+  var html='';
+
+  // ── TOTALES ──
+  html+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px">';
+  html+='<div style="background:#f0faf5;border-radius:10px;padding:14px;text-align:center">';
+  html+='<div style="font-size:12px;color:#0F6E56;margin-bottom:2px">Total hoy</div>';
+  html+='<div style="font-size:26px;font-weight:600;color:#0F6E56">'+fmt(total)+'</div>';
+  html+='<div style="font-size:11px;color:#0F6E56;opacity:0.7">'+hoy.length+' ventas</div>';
   html+='</div>';
-  html+='<div class="card"><div class="sl">Ventas por turno hoy</div>';
-  [['desayuno',d],['almuerzo',al],['cena',c]].forEach(function(it){
+  html+='<div style="background:'+(ganancia>=0?'#f0faf5':'#fff5f5')+';border-radius:10px;padding:14px;text-align:center">';
+  html+='<div style="font-size:12px;color:'+(ganancia>=0?'#0F6E56':'#A32D2D')+';margin-bottom:2px">Ganancia neta</div>';
+  html+='<div style="font-size:26px;font-weight:600;color:'+(ganancia>=0?'#0F6E56':'#A32D2D')+'">'+fmt(ganancia)+'</div>';
+  html+='<div style="font-size:11px;color:#888">ventas − gastos</div>';
+  html+='</div></div>';
+
+  // ── DESGLOSE ──
+  html+='<div class="card"><div class="sl">Desglose del día</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">';
+  html+='<div style="background:#f0faf5;border-radius:8px;padding:12px">';
+  html+='<div style="font-size:11px;color:#085041;margin-bottom:2px">💵 Efectivo</div>';
+  html+='<div style="font-size:20px;font-weight:600;color:#0F6E56">'+fmt(totalEfectivoHoy)+'</div></div>';
+  html+='<div style="background:#f0eeff;border-radius:8px;padding:12px">';
+  html+='<div style="font-size:11px;color:#3C3489;margin-bottom:2px">💜 Yape</div>';
+  html+='<div style="font-size:20px;font-weight:600;color:#534AB7">'+fmt(totalYapeHoy)+'</div></div>';
+  html+='<div style="background:#fff5f5;border-radius:8px;padding:12px">';
+  html+='<div style="font-size:11px;color:#791F1F;margin-bottom:2px">📤 Gastos</div>';
+  html+='<div style="font-size:20px;font-weight:600;color:#A32D2D">'+fmt(totalGastosHoy)+'</div></div>';
+  html+='<div style="background:#faf5e8;border-radius:8px;padding:12px">';
+  html+='<div style="font-size:11px;color:#633806;margin-bottom:2px">🏦 Apertura</div>';
+  html+='<div style="font-size:20px;font-weight:600;color:#854F0B">'+fmt(aper?aper.total:0)+'</div></div>';
+  html+='</div></div>';
+
+  // ── VENTAS POR TURNO ──
+  html+='<div class="card"><div class="sl">Ventas por turno</div>';
+  [['desayuno',d],['almuerzo',al],['cena',ce]].forEach(function(it){
+    var pct=(it[1]/maxBar*100).toFixed(0);
     var turnoVentas=hoy.filter(function(v){return v.turno===it[0];});
-    // Agrupar productos
     var prods={};
     turnoVentas.forEach(function(v){
-      if(!prods[v.producto]){prods[v.producto]={cant:0,total:0};}
-      prods[v.producto].cant+=v.cantidad;
-      prods[v.producto].total+=v.total;
+      if(!prods[v.producto])prods[v.producto]={cant:0,total:0};
+      prods[v.producto].cant+=v.cantidad;prods[v.producto].total+=v.total;
     });
-    html+='<div style="margin-bottom:12px">';
-    html+='<div class="bar-row"><div class="bar-label"><span style="font-weight:600">'+turnoLabel(it[0])+'</span><span>'+fmt(it[1])+'</span></div>';
-    html+='<div class="bar-bg"><div class="bar-fill" style="width:'+((it[1]/maxBar*100).toFixed(0))+'%"></div></div></div>';
+    html+='<div style="margin-bottom:14px">';
+    html+='<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">';
+    html+='<span style="font-weight:600;color:#333">'+turnoLabel(it[0])+'</span>';
+    html+='<span style="color:#0F6E56;font-weight:600">'+fmt(it[1])+'</span></div>';
+    html+='<div style="height:8px;background:#f0ede8;border-radius:4px;overflow:hidden;margin-bottom:6px">';
+    html+='<div style="height:100%;width:'+pct+'%;background:#8b0000;border-radius:4px"></div></div>';
     if(Object.keys(prods).length>0){
-      html+='<div style="padding:6px 0 0 4px">';
       Object.keys(prods).forEach(function(nom){
         var pr=prods[nom];
-        html+='<div style="display:flex;justify-content:space-between;font-size:13px;color:#666;padding:3px 0;border-bottom:0.5px solid #f0ede8">';
-        html+='<span>'+nom+'</span>';
-        html+='<span style="color:#555"><strong>x'+pr.cant+'</strong> &nbsp;'+fmt(pr.total)+'</span>';
-        html+='</div>';
+        html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:#666;padding:2px 0;border-bottom:0.5px solid #f0ede8">';
+        html+='<span>'+nom+'</span><span><strong>x'+pr.cant+'</strong> · '+fmt(pr.total)+'</span></div>';
       });
-      html+='</div>';
     }
     html+='</div>';
   });
   html+='</div>';
-  html+='<div class="card"><div class="sl">Asistencia hoy</div>';
+
+  // ── PERSONAL ──
+  html+='<div class="card"><div class="sl">Personal hoy — '+presIds.length+'/'+personal.length+'</div>';
   if(personal.length===0){html+='<div class="empty">Sin personal registrado</div>';}
-  else{personal.forEach(function(p){
-    var regs=asisHoy.filter(function(a){return a.personalId===p.id});
-    var ult=regs.length?regs[regs.length-1]:null;
-    var dc='dot-none',et='Sin registrar';
-    if(ult){if(ult.estado==='asistio'){dc='dot-in';et='Asistio';}else if(ult.estado==='medio tiempo'){dc='dot-out';et='Medio tiempo';}else{dc='dot-abs';et='No asistio';}}
-    html+='<div class="row"><div class="rn">'+p.nombre+'<span class="badge bp">'+p.cargo+'</span></div>';
-    html+='<div style="display:flex;align-items:center;font-size:12px;color:#888"><span class="dot '+dc+'"></span>'+et+'</div></div>';
-  });}
+  else{
+    html+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    personal.forEach(function(p){
+      var regs=asisHoy.filter(function(a){return a.personalId===p.id;});
+      var ult=regs.length?regs[regs.length-1]:null;
+      var estado=ult?ult.estado:'sin registrar';
+      var bg=estado==='asistio'?'#f0faf5':estado==='medio tiempo'?'#faf5e8':estado==='descanso pagado'?'#f0eeff':estado==='no asistio'?'#fff5f5':'#f0ede8';
+      var color=estado==='asistio'?'#085041':estado==='medio tiempo'?'#633806':estado==='descanso pagado'?'#3C3489':estado==='no asistio'?'#791F1F':'#888';
+      var dot=estado==='asistio'?'●':estado==='medio tiempo'?'◑':estado==='descanso pagado'?'○':estado==='no asistio'?'✕':'–';
+      html+='<div style="background:'+bg+';color:'+color+';font-size:12px;padding:5px 10px;border-radius:20px;display:flex;align-items:center;gap:4px">';
+      html+='<span>'+dot+'</span><span>'+p.nombre.split(' ')[0]+'</span></div>';
+    });
+    html+='</div>';
+  }
   html+='</div>';
-  html+='<div class="card"><div class="sl">Ultimas ventas</div>';
+
+  // ── MESAS ACTIVAS ──
+  html+='<div class="card"><div class="sl">Mesas activas</div>';
+  if(mesasAbiertas.length===0){html+='<div class="empty">Sin mesas abiertas ahora</div>';}
+  else{
+    html+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">';
+    mesasAbiertas.forEach(function(mid){
+      var m=mesas[mid];
+      var items=Array.isArray(m.items)?m.items:(m.items?Object.values(m.items):[]);
+      var pend=items.filter(function(it){return !it.cobrado;});
+      var tot=pend.reduce(function(a,it){return a+it.subtotal;},0);
+      html+='<div style="border:1.5px solid #0F6E56;border-radius:10px;padding:10px;background:#f0faf5;cursor:pointer" onclick="showTab(\'nueva\');setTimeout(function(){setModoVenta(\'mesas\');setTimeout(function(){abrirMesaFija(\''+mid+'\');},100);},100)">';
+      html+='<div style="font-size:13px;font-weight:600;color:#085041">'+m.nombre+'</div>';
+      html+='<div style="font-size:11px;color:#0F6E56">'+pend.reduce(function(a,it){return a+it.cantidad;},0)+' items</div>';
+      html+='<div style="font-size:16px;font-weight:600;color:#0F6E56;margin-top:2px">'+fmt(tot)+'</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+
+  // ── ULTIMAS VENTAS ──
+  html+='<div class="card"><div class="sl">Últimas ventas</div>';
   if(hoy.length===0){html+='<div class="empty">Sin ventas hoy</div>';}
   else{hoy.slice(0,6).forEach(function(v){
     html+='<div class="row"><div><div class="rn">'+v.producto+'<span class="badge '+turnoClass(v.turno)+'">'+turnoLabel(v.turno)+'</span></div>';
-    html+='<div class="rm">'+v.cantidad+' x '+fmt(v.precioUnit)+' - '+v.hora;
-      html+=(v.pago==='yape'?' · <span style="color:#7b2fff;font-weight:600">Yape</span>':' · Efectivo');
-      html+='</div></div>';
+    html+='<div class="rm">'+v.cantidad+' × '+fmt(v.precioUnit)+' · '+v.hora;
+    html+=(v.pago==='yape'?' · <span style="color:#534AB7;font-weight:600">Yape</span>':' · Efectivo');
+    html+='</div></div>';
     html+='<div style="display:flex;align-items:center;gap:6px"><div class="ra">'+fmt(v.total)+'</div>';
     if(!currentUser||currentUser.rol!=='cajero'){html+='<button class="btnd" onclick="eliminarVenta(\''+v.id+'\')">x</button>';}
     html+='</div></div>';
