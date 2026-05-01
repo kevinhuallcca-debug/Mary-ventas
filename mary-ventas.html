@@ -1598,6 +1598,9 @@ function renderEmpDetail(){
   html+='<div><div style="font-size:17px;font-weight:600">'+emp.nombre+'</div>';
   html+='<div style="font-size:11px;color:#aaa;text-transform:uppercase">'+emp.cargo+' · PIN: '+(emp.pin||'sin PIN')+'</div></div></div>';
   html+='<button class="btnd" onclick="eliminarPersonal(\''+emp.id+'\')">Eliminar</button></div>';
+  html+='<div class="field" style="margin-top:10px"><label>Cambiar nombre</label>';
+  html+='<div style="display:flex;gap:8px"><input type="text" id="new-nombre" placeholder="Nombre completo" value="'+emp.nombre+'" style="border:1px solid #e0d5c5;border-radius:8px;padding:7px 11px;font-size:14px;font-family:inherit;flex:1">';
+  html+='<button class="btn" style="width:auto;padding:7px 16px;margin:0" onclick="cambiarNombre(\''+emp.id+'\')">Guardar</button></div></div>';
   html+='<div class="field" style="margin-top:10px"><label>Cambiar PIN</label>';
   html+='<div style="display:flex;gap:8px"><input type="number" id="new-pin" placeholder="Nuevo PIN" style="border:1px solid #e0d5c5;border-radius:8px;padding:7px 11px;font-size:14px;font-family:inherit;width:140px">';
   html+='<button class="btn" style="width:auto;padding:7px 16px;margin:0" onclick="cambiarPin(\''+emp.id+'\')">Guardar</button></div></div>';
@@ -1904,6 +1907,15 @@ function agregarPersonal(){
   db.ref('personal').push({nombre:nom,cargo:cargo,sueldo:sueldo,sueldoDia:sueldo,historialSueldos:[{fecha:today(),monto:sueldo,hora:new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}],pin:pin})
     .then(function(){showToast('Empleado agregado');});
 }
+function cambiarNombre(id){
+  var nom=document.getElementById('new-nombre').value.trim();
+  if(!nom){showToast('Escribe el nombre',true);return;}
+  db.ref('personal/'+id).update({nombre:nom}).then(function(){
+    showToast('Nombre actualizado');
+    renderEmpDetail();
+  });
+}
+
 function cambiarPin(id){
   var pin=document.getElementById('new-pin').value.trim();
   if(!pin||pin.length<4){showToast('PIN invalido',true);return;}
