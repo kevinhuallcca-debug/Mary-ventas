@@ -695,7 +695,7 @@ function renderEmpView(empId){
 
   // Adelantos
   html+='<div class="card"><div class="sl">Mis adelantos este mes</div>';
-  if(adEmp.length===0){html+='<div class="empty">Sin adelantos este mes</div>';}
+  if(adEmp.length===0){html+='<div class="empty">Sin adelantos pendientes</div>';}
   else{adEmp.forEach(function(a){
     var tag=a.tipo==='efectivo'?'<span class="tag-ef">Efectivo</span>':'<span class="tag-pr">Producto</span>';
     html+='<div class="row"><div>'+tag+'<div class="rn" style="margin-top:3px">'+(a.descripcion||'Adelanto')+'</div>';
@@ -1722,7 +1722,12 @@ function renderSubAsistencia(emp,mes){
 }
 
 function renderSubAdelantos(emp,mes){
-  var adEmp=adelantos.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes&&!a.liquidado});
+  // Filtrar desde ultimo pago
+  var pagosEmpA=pagos.filter(function(p){return p.personalId===emp.id;});
+  pagosEmpA.sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  var ultimoPagoA=pagosEmpA.length?pagosEmpA[0].fecha:null;
+  var adEmp=adelantos.filter(function(a){return a.personalId===emp.id&&!a.liquidado&&(!ultimoPagoA||a.fecha>ultimoPagoA);});
+  adEmp.sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
   var adEf=adEmp.filter(function(a){return a.tipo==='efectivo'}).reduce(function(a,x){return a+x.monto},0);
   var adPr=adEmp.filter(function(a){return a.tipo==='producto'}).reduce(function(a,x){return a+x.monto},0);
   var html='<div class="card"><div class="sl">Registrar adelanto</div>';
@@ -1736,12 +1741,12 @@ function renderSubAdelantos(emp,mes){
   html+='<div class="field"><label>Fecha</label><input type="date" id="ad-fecha" value="'+today()+'" style="max-width:200px"></div>';
   html+='<div class="field"><label>Nota</label><input type="text" id="ad-nota" placeholder="Opcional..."></div>';
   html+='<button class="btn btn-o" onclick="guardarAdelanto(\''+emp.id+'\',\''+emp.nombre+'\')">Registrar adelanto</button></div>';
-  html+='<div class="card"><div class="sl">Adelantos del mes</div>';
+  html+='<div class="card"><div class="sl">Adelantos desde último pago'+(ultimoPagoA?' ('+fmtDate(ultimoPagoA)+')':'')+'</div>';
   html+='<div class="resumen-box">';
   html+='<div class="resumen-row"><span>Efectivo</span><span style="color:#185FA5">'+fmt(adEf)+'</span></div>';
   html+='<div class="resumen-row"><span>Productos</span><span style="color:#993556">'+fmt(adPr)+'</span></div>';
   html+='<div class="resumen-row total"><span>Total</span><span style="color:#8b0000">'+fmt(adEf+adPr)+'</span></div></div>';
-  if(adEmp.length===0){html+='<div class="empty">Sin adelantos este mes</div>';}
+  if(adEmp.length===0){html+='<div class="empty">Sin adelantos pendientes</div>';}
   else{adEmp.forEach(function(a){
     var tag=a.tipo==='efectivo'?'<span class="tag-ef">Efectivo</span>':'<span class="tag-pr">Producto</span>';
     html+='<div class="row"><div>'+tag+'<div class="rn" style="margin-top:3px">'+(a.descripcion||'Adelanto')+'</div>';
