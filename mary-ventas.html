@@ -1717,15 +1717,7 @@ function renderSubAsistencia(emp,mes){
   html+='<div class="row"><div class="rn">Faltas</div><div style="font-size:14px;font-weight:600;color:#A32D2D">'+diasF.length+'</div></div>';
   html+='</div>';
 
-  // Historial completo
-  var histAll=asisDesde.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora);});
-  html+='<div class="card"><div class="sl">Historial</div>';
-  if(histAll.length===0){html+='<div class="empty">Sin registros en este periodo</div>';}
-  else{histAll.forEach(function(r){
-    var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo</span>';
-    html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span><button class="btnd" onclick="eliminarAsis(\''+r.id+'\')">x</button></div>';
-  });}
-  html+='</div>';
+
   return html;
 }
 
