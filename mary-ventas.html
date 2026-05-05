@@ -1914,6 +1914,19 @@ function renderSubLiquidacion(emp,mes){
   }
   html+='</div>';
 
+  // Sueldo medio tiempo
+  var sueldoMedioActual=emp.sueldoMedio!==undefined&&emp.sueldoMedio!==null?emp.sueldoMedio:null;
+  var medioLabel=sueldoMedioActual!==null?fmt(sueldoMedioActual)+' (personalizado)':fmt(sueldoDia/2)+' (50% auto)';
+  html+='<div style="background:#f9f5ef;border-radius:12px;padding:12px;margin-bottom:12px">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+  html+='<span style="font-size:13px;font-weight:600;color:#555">◑ Medio tiempo</span>';
+  html+='<span style="font-size:15px;font-weight:700;color:#854F0B">'+medioLabel+'</span></div>';
+  html+='<div style="display:flex;gap:8px">';
+  html+='<input type="number" id="nuevo-sueldo-medio-'+emp.id+'" placeholder="Monto personalizado..." step="1" min="0" style="flex:1;border:1px solid #e0d5c5;border-radius:8px;padding:9px;font-size:14px;font-family:inherit">';
+  html+='<button onclick="actualizarSueldoMedio(\''+emp.id+'\')" style="background:#854F0B;color:#fff;border:none;border-radius:8px;padding:9px 12px;cursor:pointer;font-size:13px">Guardar</button></div>';
+  if(sueldoMedioActual!==null){html+='<button onclick="quitarSueldoMedio(\''+emp.id+'\')" style="margin-top:6px;background:none;border:none;color:#aaa;font-size:11px;cursor:pointer;font-family:inherit">↩ Volver al 50% automático</button>';}
+  html+='</div>';
+
   // Info desde cuando se cuenta
   if(desdeFecha){
     html+='<div style="background:#f0faf5;border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px;color:#0F6E56">';
