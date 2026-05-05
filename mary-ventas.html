@@ -1697,7 +1697,9 @@ function renderEmpDetail(){
   html+='<nav class="sub-nav"><button class="snb '+(selectedEmpSubTab==='asistencia'?'on':'')+'" onclick="subTab(\'asistencia\')">Asistencia</button>';
   html+='<button class="snb '+(selectedEmpSubTab==='adelantos'?'on':'')+'" onclick="subTab(\'adelantos\')">Adelantos</button>';
 
-  html+='<button class="snb '+(selectedEmpSubTab==='liquidacion'?'on':'')+'" onclick="subTab(\'liquidacion\')">Liquidacion</button></nav>';
+  html+='<button class="snb '+(selectedEmpSubTab==='liquidacion'?'on':'')+'" onclick="subTab(\'liquidacion\')">Liquidacion</button>';
+  if(currentUser&&currentUser.rol==='admin'){html+='<button class="snb '+(selectedEmpSubTab==='vacaciones'?'on':'')+'" onclick="subTab(\'vacaciones\')">🌴 Vacaciones</button>';}
+  html+='</nav>';
   if(selectedEmpSubTab==='asistencia')html+=renderSubAsistencia(emp,mes);
   else if(selectedEmpSubTab==='adelantos')html+=renderSubAdelantos(emp,mes);
 
