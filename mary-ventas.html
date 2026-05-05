@@ -1031,64 +1031,120 @@ function renderNueva(){
   var cont=document.getElementById('nueva');
   cont.innerHTML=renderPOSHTML();
   renderPOSProducts();
+  renderPOSItems();
   updatePOSTotals();
+  // Re-render on resize for responsiveness
+  window.onresize=function(){if(activeTab==='nueva')renderNueva();};
 }
 
 function renderPOSHTML(){
   var turnoAuto=getTurnoAuto();
-  return '<div style="display:flex;gap:0;height:calc(100vh - 160px);overflow:hidden;margin:-1rem;border-radius:12px;overflow:hidden">'+
-  // LEFT: productos
-  '<div style="flex:1;display:flex;flex-direction:column;background:#f8f9fc;overflow:hidden">'+
-    // Search + turno
-    '<div style="padding:10px;background:#fff;border-bottom:1px solid #e8eaf0;display:flex;gap:8px">'+
-      '<div style="display:flex;align-items:center;background:#f4f5f7;border-radius:10px;padding:6px 10px;flex:1;gap:6px">'+
-        '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#9aa0b4" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>'+
-        '<input type="text" id="pos-search" placeholder="Buscar..." oninput="posFiltrar(this.value)" style="border:none;background:transparent;outline:none;font-family:inherit;font-size:13px;width:100%">'+
+  var isMobile=window.innerWidth<768;
+  var isTablet=window.innerWidth>=768&&window.innerWidth<1024;
+
+  if(isMobile){
+    // MOBILE: tabs arriba (Productos / Carrito)
+    return '<div style="display:flex;flex-direction:column;height:calc(100vh - 160px);margin:-1rem;overflow:hidden">'+
+      // Tab selector
+      '<div style="display:flex;background:#fff;border-bottom:2px solid #e8eaf0">'+
+        '<button id="pos-tab-prod" onclick="posMobileTab(\'productos\')" style="flex:1;padding:10px;border:none;background:#1a1a2e;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🍽️ Productos</button>'+
+        '<button id="pos-tab-cart" onclick="posMobileTab(\'carrito\')" style="flex:1;padding:10px;border:none;background:#fff;color:#888;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" id="pos-tab-cart">🛒 Pedido <span id="pos-badge" style="background:#e63946;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;display:none">0</span></button>'+
       '</div>'+
-      '<select id="pos-turno" onchange="renderPOSProducts()" style="border:1px solid #e8eaf0;border-radius:8px;padding:6px 8px;font-size:12px;font-family:inherit;background:#fff">'+
-        '<option value="todas">Todos</option>'+
-        '<option value="desayuno"'+(turnoAuto==='desayuno'?' selected':'')+'>🌅 Desayuno</option>'+
-        '<option value="almuerzo"'+(turnoAuto==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option>'+
-        '<option value="cena"'+(turnoAuto==='cena'?' selected':'')+'>🌙 Cena</option>'+
-        '<option value="bebidas">🥤 Bebidas</option>'+
-        '<option value="otro">📦 Otro</option>'+
-      '</select>'+
+      // Search + turno (siempre visible)
+      '<div style="padding:8px;background:#fff;border-bottom:1px solid #e8eaf0;display:flex;gap:6px">'+
+        '<div style="display:flex;align-items:center;background:#f4f5f7;border-radius:8px;padding:6px 10px;flex:1;gap:6px">'+
+          '<input type="text" id="pos-search" placeholder="Buscar producto..." oninput="posFiltrar(this.value)" style="border:none;background:transparent;outline:none;font-family:inherit;font-size:13px;width:100%">'+
+        '</div>'+
+        '<select id="pos-turno" onchange="renderPOSProducts()" style="border:1px solid #e8eaf0;border-radius:8px;padding:6px 8px;font-size:12px;font-family:inherit;background:#fff">'+
+          '<option value="todas">Todos</option>'+
+          '<option value="desayuno"'+(turnoAuto==='desayuno'?' selected':'')+'>🌅 Desayuno</option>'+
+          '<option value="almuerzo"'+(turnoAuto==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option>'+
+          '<option value="cena"'+(turnoAuto==='cena'?' selected':'')+'>🌙 Cena</option>'+
+          '<option value="bebidas">🥤 Bebidas</option>'+
+          '<option value="otro">📦 Otro</option>'+
+        '</select>'+
+      '</div>'+
+      // Productos panel
+      '<div id="pos-panel-prod" style="flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px;align-content:start;background:#f8f9fc">'+
+        '<div id="pos-grid"></div>'+
+      '</div>'+
+      // Carrito panel (oculto por defecto)
+      '<div id="pos-panel-cart" style="flex:1;display:none;flex-direction:column;background:#fff;overflow:hidden">'+
+        '<div id="pos-items" style="flex:1;overflow-y:auto;padding:10px;background:#f8f9fc"></div>'+
+        posPaymentHTML()+
+      '</div>'+
+    '</div>';
+  } else {
+    // TABLET + PC: dos columnas lado a lado
+    var cartWidth=isTablet?'260px':'300px';
+    var cols=isTablet?'repeat(2,1fr)':'repeat(3,1fr)';
+    return '<div style="display:flex;gap:0;height:calc(100vh - 160px);overflow:hidden;margin:-1rem">'+
+      '<div style="flex:1;display:flex;flex-direction:column;background:#f8f9fc;overflow:hidden">'+
+        '<div style="padding:10px;background:#fff;border-bottom:1px solid #e8eaf0;display:flex;gap:8px">'+
+          '<div style="display:flex;align-items:center;background:#f4f5f7;border-radius:10px;padding:6px 10px;flex:1;gap:6px">'+
+            '<input type="text" id="pos-search" placeholder="Buscar producto..." oninput="posFiltrar(this.value)" style="border:none;background:transparent;outline:none;font-family:inherit;font-size:13px;width:100%">'+
+          '</div>'+
+          '<select id="pos-turno" onchange="renderPOSProducts()" style="border:1px solid #e8eaf0;border-radius:8px;padding:6px 8px;font-size:12px;font-family:inherit;background:#fff">'+
+            '<option value="todas">Todos</option>'+
+            '<option value="desayuno"'+(turnoAuto==='desayuno'?' selected':'')+'>🌅 Desayuno</option>'+
+            '<option value="almuerzo"'+(turnoAuto==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option>'+
+            '<option value="cena"'+(turnoAuto==='cena'?' selected':'')+'>🌙 Cena</option>'+
+            '<option value="bebidas">🥤 Bebidas</option>'+
+            '<option value="otro">📦 Otro</option>'+
+          '</select>'+
+        '</div>'+
+        '<div id="pos-grid" style="flex:1;overflow-y:auto;padding:10px;display:grid;grid-template-columns:'+cols+';gap:8px;align-content:start"></div>'+
+      '</div>'+
+      '<div style="width:'+cartWidth+';background:#fff;display:flex;flex-direction:column;border-left:1px solid #e8eaf0">'+
+        '<div style="padding:12px;border-bottom:1px solid #e8eaf0"><div style="font-size:13px;font-weight:700;color:#1a1a2e">🛒 Pedido</div></div>'+
+        '<div id="pos-items" style="flex:1;overflow-y:auto;padding:8px;background:#f8f9fc"></div>'+
+        posPaymentHTML()+
+      '</div>'+
+    '</div>';
+  }
+}
+
+function posPaymentHTML(){
+  return '<div style="padding:12px;border-top:1px solid #e8eaf0;background:#fff">'+
+    '<div style="margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:2px"><span>Total</span><span id="pos-subtotal">S/ 0.00</span></div>'+
+      '<div style="display:flex;justify-content:space-between;font-size:18px;font-weight:800;color:#e63946;border-top:1px dashed #e8eaf0;padding-top:6px;margin-top:4px"><span>TOTAL</span><span id="pos-total">S/ 0.00</span></div>'+
     '</div>'+
-    // Products grid
-    '<div id="pos-grid" style="flex:1;overflow-y:auto;padding:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-content:start"></div>'+
-  '</div>'+
-  // RIGHT: order
-  '<div style="width:280px;background:#fff;display:flex;flex-direction:column;border-left:1px solid #e8eaf0">'+
-    '<div style="padding:12px;border-bottom:1px solid #e8eaf0">'+
-      '<div style="font-size:13px;font-weight:700;color:#1a1a2e">🛒 Pedido</div>'+
+    '<div style="display:flex;gap:6px;margin-bottom:8px">'+
+      '<button id="btn-ef" onclick="posSetPago(\'efectivo\')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #1a1a2e;background:#1a1a2e;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">💵 Efectivo</button>'+
+      '<button id="btn-yp" onclick="posSetPago(\'yape\')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #e8eaf0;background:#fff;color:#666;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">💜 Yape</button>'+
     '</div>'+
-    '<div id="pos-items" style="flex:1;overflow-y:auto;padding:8px;background:#f8f9fc"></div>'+
-    '<div style="padding:12px;border-top:1px solid #e8eaf0">'+
-      // Totales
-      '<div style="margin-bottom:10px">'+
-        '<div style="display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:2px"><span>Subtotal</span><span id="pos-subtotal">S/ 0.00</span></div>'+
-        '<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;color:#1a1a2e;border-top:1px dashed #e8eaf0;padding-top:6px;margin-top:4px"><span>TOTAL</span><span id="pos-total" style="color:#e63946">S/ 0.00</span></div>'+
-      '</div>'+
-      // Metodo pago
-      '<div style="display:flex;gap:6px;margin-bottom:10px">'+
-        '<button id="btn-ef" onclick="posSetPago(\'efectivo\')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #1a1a2e;background:#1a1a2e;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">💵 Efectivo</button>'+
-        '<button id="btn-yp" onclick="posSetPago(\'yape\')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #e8eaf0;background:#fff;color:#666;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">💜 Yape</button>'+
-      '</div>'+
-      // Fecha
-      '<div style="margin-bottom:10px">'+
-        '<input type="date" id="pos-fecha" value="'+today()+'" style="width:100%;border:1px solid #e8eaf0;border-radius:8px;padding:7px;font-size:12px;font-family:inherit">'+
-      '</div>'+
-      // Botones
-      '<div style="display:flex;gap:8px">'+
-        '<button onclick="posCancelar()" style="flex:1;padding:11px;border-radius:10px;border:2px solid #e63946;background:#fff;color:#e63946;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Cancelar</button>'+
-        '<button onclick="posGenerar()" style="flex:2;padding:11px;border-radius:10px;border:none;background:linear-gradient(135deg,#e63946,#c1121f);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(230,57,70,0.35)">✓ Generar venta</button>'+
-      '</div>'+
+    '<div style="margin-bottom:8px">'+
+      '<input type="date" id="pos-fecha" value="'+today()+'" style="width:100%;border:1px solid #e8eaf0;border-radius:8px;padding:7px;font-size:12px;font-family:inherit">'+
     '</div>'+
-  '</div>'+
-'</div>';
+    '<div style="display:flex;gap:8px">'+
+      '<button onclick="posCancelar()" style="flex:1;padding:11px;border-radius:10px;border:2px solid #e63946;background:#fff;color:#e63946;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">✕</button>'+
+      '<button onclick="posGenerar()" style="flex:3;padding:11px;border-radius:10px;border:none;background:linear-gradient(135deg,#e63946,#c1121f);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(230,57,70,0.35)">✓ Generar venta</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function posMobileTab(tab){
+  var prod=document.getElementById('pos-panel-prod');
+  var cart=document.getElementById('pos-panel-cart');
+  var btnP=document.getElementById('pos-tab-prod');
+  var btnC=document.getElementById('pos-tab-cart');
+  if(!prod||!cart)return;
+  if(tab==='productos'){
+    prod.style.display='grid';cart.style.display='none';
+    if(btnP){btnP.style.background='#1a1a2e';btnP.style.color='#fff';}
+    if(btnC){btnC.style.background='#fff';btnC.style.color='#888';}
+  } else {
+    prod.style.display='none';cart.style.display='flex';
+    if(btnC){btnC.style.background='#1a1a2e';btnC.style.color='#fff';}
+    if(btnP){btnP.style.background='#fff';btnP.style.color='#888';}
+    renderPOSItems();updatePOSTotals();
+  }
 }
 
 function getTurnoAuto(){var h=new Date().getHours();return h<12?'desayuno':h<17?'almuerzo':'cena';}
+
+
 
 function posFiltrar(v){posBusqueda=v;renderPOSProducts();}
 
@@ -1133,6 +1189,9 @@ function posAgregar(prodId){
   else posOrder.push({prodId:prod.id,nombre:prod.nombre,cantidad:1,precioUnit:prod.precio,subtotal:prod.precio});
   renderPOSItems();
   updatePOSTotals();
+  // Update mobile badge
+  var badge=document.getElementById('pos-badge');
+  if(badge){var total=posOrder.reduce(function(a,it){return a+it.cantidad;},0);badge.textContent=total;badge.style.display=total>0?'inline':'none';}
 }
 
 function posCambiarCant(idx,delta){
