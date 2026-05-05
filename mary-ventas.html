@@ -694,7 +694,11 @@ function renderEmpView(empId){
   html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#185FA5"></div><span style="font-size:11px;color:#555">Trabajó</span></div>';
   html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#854F0B"></div><span style="font-size:11px;color:#555">Medio tiempo</span></div>';
   html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#A32D2D"></div><span style="font-size:11px;color:#555">Faltó</span></div>';
-  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#e8e4de"></div><span style="font-size:11px;color:#555">Ya pagado</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#6B3FA0"></div><span style="font-size:11px;color:#555">Descanso pagado</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#2d6a4f"></div><span style="font-size:11px;color:#555">Cancelado (asistió)</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#52b788"></div><span style="font-size:11px;color:#555">Cancelado (medio tiempo)</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#95d5b2"></div><span style="font-size:11px;color:#555">Cancelado (faltó)</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#9b72c0"></div><span style="font-size:11px;color:#555">Cancelado (descanso)</span></div>';
   html+='</div>';
 
 
@@ -1788,7 +1792,11 @@ function renderSubAsistencia(emp,mes){
   html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#185FA5"></div><span style="font-size:11px;color:#555">Trabajó</span></div>';
   html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#854F0B"></div><span style="font-size:11px;color:#555">Medio tiempo</span></div>';
   html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#A32D2D"></div><span style="font-size:11px;color:#555">Faltó</span></div>';
-  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#e8e4de"></div><span style="font-size:11px;color:#555">Ya pagado</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#6B3FA0"></div><span style="font-size:11px;color:#555">Descanso pagado</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#2d6a4f"></div><span style="font-size:11px;color:#555">Cancelado (asistió)</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#52b788"></div><span style="font-size:11px;color:#555">Cancelado (medio tiempo)</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#95d5b2"></div><span style="font-size:11px;color:#555">Cancelado (faltó)</span></div>';
+  html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#9b72c0"></div><span style="font-size:11px;color:#555">Cancelado (descanso)</span></div>';
   html+='</div>';
   html+='<div class="row"><div class="rn">Dias trabajados</div><div class="ra">'+diasT.length+'</div></div>';
   html+='<div class="row"><div class="rn">Medio tiempo</div><div style="font-size:14px;font-weight:600;color:#854F0B">'+diasMed+'</div></div>';
