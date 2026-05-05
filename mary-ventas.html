@@ -1704,6 +1704,7 @@ function renderEmpDetail(){
   else if(selectedEmpSubTab==='adelantos')html+=renderSubAdelantos(emp,mes);
 
   else if(selectedEmpSubTab==='liquidacion')html+=renderSubLiquidacion(emp,mes);
+  else if(selectedEmpSubTab==='vacaciones'&&currentUser&&currentUser.rol==='admin')html+=renderSubVacaciones(emp);
   document.getElementById('personal').innerHTML=html;
 }
 function subTab(t){selectedEmpSubTab=t;render();}
