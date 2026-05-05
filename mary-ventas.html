@@ -624,7 +624,8 @@ function renderEmpView(empId){
     var s=getSueldoEmp(f);
     var esMed=asisDesde.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
     var esDesc=asisDesde.some(function(a){return a.fecha===f&&a.estado==='descanso pagado';});
-    ganadoEmp+=esMed?s/2:s;
+    var sueldoMedioEmp=emp.sueldoMedio||null;
+    ganadoEmp+=esMed?(sueldoMedioEmp!==null?sueldoMedioEmp:s/2):s;
   });
   var saldo=ganadoEmp-totalAd;
 
@@ -1622,10 +1623,11 @@ function renderPersonalList(){
     }
     var diasTL=[];asisEmpL.forEach(function(a){if((a.estado==='asistio'||a.estado==='medio tiempo'||a.estado==='descanso pagado')&&diasTL.indexOf(a.fecha)<0)diasTL.push(a.fecha);});
     var ganadoL=0;
+    var sueldoMedioL=p.sueldoMedio||null;
     diasTL.forEach(function(f){
       var s=getSueldoDiaL(f);
       var esMedioL=asisEmpL.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
-      ganadoL+=esMedioL?s/2:s;
+      ganadoL+=esMedioL?(sueldoMedioL!==null?sueldoMedioL:s/2):s;
     });
     var totalAd=adelantos.filter(function(a){return a.personalId===p.id&&!a.liquidado&&(!ultimoPagoL||a.fecha>ultimoPagoL)}).reduce(function(a,x){return a+x.monto},0);
     var saldo=ganadoL-totalAd;
@@ -1890,7 +1892,8 @@ function renderSubLiquidacion(emp,mes){
     var s=getSueldoParaDia(f);
     // medio tiempo = mitad
     var esMedio=asisTotal.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
-    ganado+=esMedio?s/2:s;
+    var sueldoMedioLiq=emp.sueldoMedio||null;
+    ganado+=esMedio?(sueldoMedioLiq!==null?sueldoMedioLiq:s/2):s;
   });
   var saldo=ganado-totalAd;
 
@@ -1965,6 +1968,24 @@ function migrarSueldoExistentes(){
       }
       db.ref('personal/'+emp.id).update(upd);
     }
+  });
+}
+
+function actualizarSueldoMedio(empId){
+  var inp=document.getElementById('nuevo-sueldo-medio-'+empId);
+  var monto=parseFloat(inp.value);
+  if(!monto||monto<=0){showToast('Ingresa un monto válido',true);return;}
+  db.ref('personal/'+empId).update({sueldoMedio:monto}).then(function(){
+    showToast('Sueldo medio tiempo: '+fmt(monto));
+    inp.value='';
+    renderEmpDetail();
+  });
+}
+
+function quitarSueldoMedio(empId){
+  db.ref('personal/'+empId).update({sueldoMedio:null}).then(function(){
+    showToast('Vuelve al 50% automático');
+    renderEmpDetail();
   });
 }
 
