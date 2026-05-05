@@ -2022,6 +2022,181 @@ function actualizarSueldoDia(empId,inputId){
     .then(function(){showToast('Sueldo actualizado a '+fmt(monto)+'/día');inp.value='';renderEmpDetail();});
 }
 
+function renderSubVacaciones(emp){
+  var fechaInicio=emp.fechaInicioLaboral||null;
+  var metaDias=emp.metaVacaciones||270;
+  var vacActivas=emp.vacacionesActivas||false;
+  var html='<div class="card"><div class="sl">🌴 Vacaciones</div>';
+
+  // Toggle activar/desactivar seguimiento
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:'+(vacActivas?'#f0faf5':'#f9f5ef')+';border-radius:10px;margin-bottom:12px">';
+  html+='<div>';
+  html+='<div style="font-size:13px;font-weight:600;color:'+(vacActivas?'#0F6E56':'#888')+'">Seguimiento de vacaciones</div>';
+  html+='<div style="font-size:11px;color:#aaa">'+(vacActivas?'Activo para este trabajador':'No activado aún')+'</div>';
+  html+='</div>';
+  html+='<button onclick="toggleVacaciones(\''+emp.id+'\','+(vacActivas?'false':'true')+')" style="background:'+(vacActivas?'#A32D2D':'#0F6E56')+';color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px">'+(vacActivas?'Desactivar':'Activar')+'</button>';
+  html+='</div>';
+
+  if(!vacActivas){
+    html+='<div style="text-align:center;color:#aaa;padding:20px;font-size:13px">Activa el seguimiento para configurar las vacaciones de este trabajador.</div>';
+    html+='</div>';
+    return html;
+  }
+
+  // Config
+  html+='<div style="background:#f9f5ef;border-radius:10px;padding:12px;margin-bottom:12px">';
+  html+='<div class="field" style="margin-bottom:8px"><label>Fecha inicio año laboral</label>';
+  html+='<div style="display:flex;gap:8px">';
+  html+='<input type="date" id="vac-inicio" value="'+(fechaInicio||'')+'" style="flex:1;border:1px solid #e0d5c5;border-radius:8px;padding:8px;font-size:14px;font-family:inherit">';
+  html+='<button onclick="guardarFechaLaboral(\''+emp.id+'\')" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px">Guardar</button>';
+  html+='</div></div>';
+  html+='<div class="field"><label>Meta de días trabajados para vacaciones</label>';
+  html+='<div style="display:flex;gap:8px">';
+  html+='<input type="number" id="vac-meta" value="'+metaDias+'" min="1" max="365" style="width:100px;border:1px solid #e0d5c5;border-radius:8px;padding:8px;font-size:14px;font-family:inherit">';
+  html+='<button onclick="guardarMetaVacaciones(\''+emp.id+'\')" style="background:#8b0000;color:#fff;border:none;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px">Guardar</button>';
+  html+='</div></div>';
+  html+='</div>';
+
+  if(!fechaInicio){
+    html+='<div style="text-align:center;color:#aaa;padding:16px;font-size:13px">Ingresa la fecha de inicio del año laboral.</div>';
+    html+='</div>';
+    return html;
+  }
+
+  // Calcular año laboral activo
+  function dateToStr(d){
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  var inicio=new Date(fechaInicio+'T00:00:00');
+  var hoyDate=new Date(today()+'T00:00:00');
+  var inicioAno=new Date(inicio);
+  while(true){
+    var finAno=new Date(inicioAno);
+    finAno.setFullYear(finAno.getFullYear()+1);
+    finAno.setDate(finAno.getDate()-1);
+    if(finAno>=hoyDate)break;
+    inicioAno=new Date(finAno);
+    inicioAno.setDate(inicioAno.getDate()+1);
+  }
+  var finAnoActual=new Date(inicioAno);
+  finAnoActual.setFullYear(finAnoActual.getFullYear()+1);
+  finAnoActual.setDate(finAnoActual.getDate()-1);
+  var inicioStr=dateToStr(inicioAno);
+  var finStr=dateToStr(finAnoActual);
+
+  // Contar dias trabajados en este año laboral
+  var diasUnicos={};
+  asistencias.filter(function(a){
+    return a.personalId===emp.id&&a.fecha>=inicioStr&&a.fecha<=finStr&&
+           (a.estado==='asistio'||a.estado==='descanso pagado');
+  }).forEach(function(a){diasUnicos[a.fecha]=true;});
+  var diasTrabajados=Object.keys(diasUnicos).length;
+  var pct=Math.min(100,Math.round(diasTrabajados/metaDias*100));
+  var ganadas=diasTrabajados>=metaDias;
+  var diasRestantes=Math.max(0,metaDias-diasTrabajados);
+
+  // Progreso
+  html+='<div style="margin-bottom:14px">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+  html+='<span style="font-size:13px;color:#555">Año laboral actual</span>';
+  html+='<span style="font-size:12px;color:#aaa">'+fmtDate(inicioStr)+' → '+fmtDate(finStr)+'</span>';
+  html+='</div>';
+  html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:6px">';
+  html+='<span>Días trabajados</span><span style="font-weight:700;color:'+(ganadas?'#0F6E56':'#8b0000')+'">'+diasTrabajados+' / '+metaDias+'</span>';
+  html+='</div>';
+  html+='<div style="height:12px;background:#f0ede8;border-radius:6px;overflow:hidden;margin-bottom:8px">';
+  html+='<div style="height:100%;width:'+pct+'%;background:'+(ganadas?'#0F6E56':'#8b0000')+';border-radius:6px;transition:width 0.3s"></div></div>';
+  if(ganadas){
+    html+='<div style="background:#f0faf5;border-radius:8px;padding:12px;text-align:center">';
+    html+='<div style="font-size:24px;margin-bottom:4px">🎉</div>';
+    html+='<div style="font-size:14px;font-weight:600;color:#0F6E56">¡Ya ganó sus vacaciones!</div>';
+    html+='<div style="font-size:12px;color:#aaa;margin-top:4px">Completó '+diasTrabajados+' días trabajados</div>';
+    html+='</div>';
+  } else {
+    html+='<div style="font-size:12px;color:#aaa;text-align:center">Faltan <strong>'+diasRestantes+' días</strong> para completar el año</div>';
+  }
+  html+='</div>';
+
+  // Historial de vacaciones tomadas
+  var vacTomadas=emp.vacacionesTomadas||[];
+  html+='<div style="margin-top:14px"><div style="font-size:11px;color:#8b0000;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Vacaciones tomadas</div>';
+  if(vacTomadas.length===0){
+    html+='<div style="font-size:13px;color:#aaa;text-align:center;padding:10px">Ninguna registrada aún</div>';
+  } else {
+    vacTomadas.forEach(function(v,i){
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid #f0e8d8">';
+      html+='<div><div style="font-size:13px;font-weight:600">'+fmtDate(v.desde)+' → '+fmtDate(v.hasta)+'</div>';
+      html+='<div style="font-size:11px;color:#aaa">'+v.dias+' días · '+fmt(v.monto)+'</div></div>';
+      html+='<button onclick="eliminarVacacion(\''+emp.id+'\','+i+')" style="background:none;border:none;color:#ddd;cursor:pointer;font-size:16px">✕</button>';
+      html+='</div>';
+    });
+  }
+  // Registrar nuevas vacaciones
+  html+='<div style="margin-top:10px;background:#f9f5ef;border-radius:10px;padding:12px">';
+  html+='<div style="font-size:12px;color:#8b0000;font-weight:600;margin-bottom:8px">Registrar vacaciones tomadas</div>';
+  html+='<div class="g2"><div class="field"><label>Desde</label><input type="date" id="vac-desde" style="border:1px solid #e0d5c5;border-radius:8px;padding:8px;font-size:14px;font-family:inherit;width:100%"></div>';
+  html+='<div class="field"><label>Hasta</label><input type="date" id="vac-hasta" style="border:1px solid #e0d5c5;border-radius:8px;padding:8px;font-size:14px;font-family:inherit;width:100%"></div></div>';
+  html+='<button onclick="registrarVacacion(\''+emp.id+'\')" style="width:100%;background:#0F6E56;color:#fff;border:none;border-radius:8px;padding:10px;font-size:14px;cursor:pointer;font-family:inherit">✓ Registrar vacaciones</button>';
+  html+='</div>';
+  html+='</div>';
+  html+='</div>';
+  return html;
+}
+
+function toggleVacaciones(empId,activo){
+  db.ref('personal/'+empId).update({vacacionesActivas:activo}).then(function(){
+    showToast(activo?'Seguimiento activado':'Seguimiento desactivado');
+    renderEmpDetail();
+  });
+}
+
+function guardarFechaLaboral(empId){
+  var fecha=document.getElementById('vac-inicio').value;
+  if(!fecha){showToast('Selecciona una fecha',true);return;}
+  db.ref('personal/'+empId).update({fechaInicioLaboral:fecha}).then(function(){
+    showToast('Fecha guardada');renderEmpDetail();
+  });
+}
+
+function guardarMetaVacaciones(empId){
+  var meta=parseInt(document.getElementById('vac-meta').value)||270;
+  db.ref('personal/'+empId).update({metaVacaciones:meta}).then(function(){
+    showToast('Meta: '+meta+' días');renderEmpDetail();
+  });
+}
+
+function registrarVacacion(empId){
+  var desde=document.getElementById('vac-desde').value;
+  var hasta=document.getElementById('vac-hasta').value;
+  if(!desde||!hasta){showToast('Completa las fechas',true);return;}
+  if(desde>hasta){showToast('La fecha de inicio debe ser antes del fin',true);return;}
+  var emp=personal.find(function(p){return p.id===empId;});
+  if(!emp)return;
+  // Calcular dias y monto
+  var d1=new Date(desde+'T00:00:00');
+  var d2=new Date(hasta+'T00:00:00');
+  var dias=Math.round((d2-d1)/(1000*60*60*24))+1;
+  var sueldoDia=emp.sueldoDia||emp.sueldo||0;
+  var monto=dias*sueldoDia;
+  var vacTomadas=(emp.vacacionesTomadas||[]).slice();
+  vacTomadas.push({desde:desde,hasta:hasta,dias:dias,monto:monto,registrado:today()});
+  db.ref('personal/'+empId).update({vacacionesTomadas:vacTomadas}).then(function(){
+    showToast('Vacaciones registradas: '+dias+' días · '+fmt(monto));
+    renderEmpDetail();
+  });
+}
+
+function eliminarVacacion(empId,idx){
+  if(!confirm('¿Eliminar este registro de vacaciones?'))return;
+  var emp=personal.find(function(p){return p.id===empId;});
+  if(!emp)return;
+  var vacTomadas=(emp.vacacionesTomadas||[]).slice();
+  vacTomadas.splice(idx,1);
+  db.ref('personal/'+empId).update({vacacionesTomadas:vacTomadas}).then(function(){
+    showToast('Registro eliminado');renderEmpDetail();
+  });
+}
+
 function agregarPersonal(){
   var nom=document.getElementById('per-nom').value.trim();
   var cargo=document.getElementById('per-cargo').value;
