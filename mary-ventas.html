@@ -1293,7 +1293,8 @@ function posCobrarParcial(){
 
 function guardarVenta(){
   if(carritoItems.length===0){showToast('Agrega al menos un producto',true);return;}
-  var turno=document.getElementById('np-turno').value;
+  var turnoEl=document.getElementById('pos-turno')||document.getElementById('np-turno');
+  var turno=turnoEl?turnoEl.value:getTurnoAuto();
   var fecha=document.getElementById('np-fecha').value||today();
   var obs=document.getElementById('np-obs').value;
   var pago=document.getElementById('np-pago').value;
