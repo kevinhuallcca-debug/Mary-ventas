@@ -1003,12 +1003,11 @@ function renderPOS(){
   cats=cats.filter(function(c){return c==='todas'||productos.some(function(p){return p.turno===c;});});
 
   // Productos filtrados
-  var turnoActivo=document.getElementById('pos-turno')?document.getElementById('pos-turno').value:(window._turnoManual||getTurnoAuto());
+  var turnoActivo=window._turnoManual||getTurnoAuto();
   var filtrados=productos.filter(function(p){
-    var matchTurno=turnoActivo==='todas'||p.turno===turnoActivo||p.turno==='bebidas'||p.turno==='otro';
-    var matchCat=posCategoria==='todas'||p.turno===posCategoria;
+    var matchTurno=posCategoria!=='todas'?p.turno===posCategoria:(turnoActivo==='todas'||p.turno===turnoActivo||p.turno==='bebidas'||p.turno==='otro');
     var matchBus=!posBusqueda||p.nombre.toLowerCase().indexOf(posBusqueda.toLowerCase())>=0;
-    return matchTurno&&matchCat&&matchBus;
+    return matchTurno&&matchBus;
   });
   // Ordenar por cantidad vendida en historial
   var contVentas={};
