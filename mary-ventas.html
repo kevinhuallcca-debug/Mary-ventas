@@ -1015,7 +1015,7 @@ function renderPOS(){
     :carritoItems;
   var total=carrito.reduce(function(a,it){return a+it.subtotal;},0);
 
-  var turnoAuto=getTurnoAuto();
+  var turnoAuto=window._turnoManual||getTurnoAuto();
   var mesaActObj=modoVenta==='mesas'&&mesaActiva?mesas[mesaActiva]:null;
 
   var html='';
@@ -1141,7 +1141,8 @@ var posPago='efectivo';
 function setPosMode(m){modoVenta=m;mesaActiva=null;carritoItems=[];renderPOS();}
 function posSetCat(c){posCategoria=c;renderPOS();}
 function posBuscar(v){posBusqueda=v;renderPOS();}
-function posTurnoChange(){renderPOS();}
+function posTurnoChange(){var el=document.getElementById('pos-turno');if(el)window._turnoManual=el.value;renderPOS();}
+
 
 function posSelMesa(mid){
   mesaActiva=mid;
