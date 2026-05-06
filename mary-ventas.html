@@ -649,7 +649,7 @@ function renderEmpView(empId){
   diasT.forEach(function(f){
     var s=getSueldoEmp(f);
     var esMed=asisDesde.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
-    ganadoEmp+=esMed?s/2:s;
+    if(esMed){var regMed=asisDesde.find(function(a){return a.fecha===f&&a.estado==='medio tiempo';});ganadoEmp+=s*((regMed&&regMed.porcentaje||50)/100);}else{ganadoEmp+=s;}
   });
   var saldo=ganadoEmp-totalAd;
 
@@ -724,7 +724,7 @@ function renderEmpView(empId){
   else{
     var histSorted=asisDesde.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora);});
     histSorted.forEach(function(r){
-      var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo</span>';
+      var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo '+(r.porcentaje||50)+'%</span>';
       html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span></div>';
     });
   }
@@ -1633,7 +1633,7 @@ function renderPersonalList(){
     diasTL.forEach(function(f){
       var s=getSueldoDiaL(f);
       var esMedioL=asisEmpL.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
-      ganadoL+=esMedioL?s/2:s;
+      if(esMedioL){var regMedL=asisEmpL.find(function(a){return a.fecha===f&&a.estado==='medio tiempo';});ganadoL+=s*((regMedL&&regMedL.porcentaje||50)/100);}else{ganadoL+=s;}
     });
     var totalAd=adelantos.filter(function(a){return a.personalId===p.id&&!a.liquidado&&(!ultimoPagoL||a.fecha>ultimoPagoL)}).reduce(function(a,x){return a+x.monto},0);
     var saldo=ganadoL-totalAd;
@@ -1801,7 +1801,7 @@ function renderSubAsistencia(emp,mes){
   html+='<div class="card"><div class="sl">Historial</div>';
   if(histAll.length===0){html+='<div class="empty">Sin registros en este periodo</div>';}
   else{histAll.forEach(function(r){
-    var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo</span>';
+    var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo '+(r.porcentaje||50)+'%</span>';
     html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span><button class="btnd" onclick="eliminarAsis(\''+r.id+'\')">x</button></div>';
   });}
   html+='</div>';
@@ -1896,7 +1896,7 @@ function renderSubLiquidacion(emp,mes){
     var s=getSueldoParaDia(f);
     // medio tiempo = mitad
     var esMedio=asisTotal.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
-    ganado+=esMedio?s/2:s;
+    if(esMedio){var regMedT=asisTotal.find(function(a){return a.fecha===f&&a.estado==='medio tiempo';});ganado+=s*((regMedT&&regMedT.porcentaje||50)/100);}else{ganado+=s;}
   });
   var saldo=ganado-totalAd;
 
@@ -2036,17 +2036,68 @@ function cerrarModalAsis(){
   document.getElementById('asis-modal').style.display='none';
 }
 
-function guardarAsisUnica(personalId, nombre, estado, fecha){
+function guardarAsisUnica(personalId, nombre, estado, fecha, porcentaje){
   // Buscar si ya existe registro para ese dia y empleado
   var existentes=asistencias.filter(function(a){return a.personalId===personalId&&a.fecha===fecha;});
   var promises=existentes.map(function(a){return db.ref('asistencias/'+a.id).remove();});
+  var data={personalId:personalId,nombre:nombre,estado:estado,fecha:fecha,hora:nowTime(),timestamp:new Date().toISOString()};
+  if(estado==='medio tiempo'){data.porcentaje=porcentaje||50;}
   Promise.all(promises).then(function(){
-    db.ref('asistencias').push({personalId:personalId,nombre:nombre,estado:estado,fecha:fecha,hora:nowTime(),timestamp:new Date().toISOString()})
-      .then(function(){showToast(nombre+' — '+estado);});
+    db.ref('asistencias').push(data)
+      .then(function(){
+        var label=estado==='medio tiempo'?estado+' ('+data.porcentaje+'%)':estado;
+        showToast(nombre+' — '+label);
+      });
   });
 }
 
+// Helpers del panel de medio tiempo
+window._pctMedio=50;
+function toggleMedioTiempoPanel(){
+  var panel=document.getElementById('medio-tiempo-panel');
+  if(panel){panel.style.display=panel.style.display==='none'?'block':'none';}
+  window._pctMedio=50;
+  setPorcentajeMedio(50);
+}
+function setPorcentajeMedio(pct){
+  window._pctMedio=pct;
+  var preview=document.getElementById('pct-preview');
+  if(preview)preview.textContent='= '+pct+'%';
+  var inp=document.getElementById('pct-custom');
+  if(inp)inp.value=pct;
+  [25,50,75].forEach(function(p){
+    var btn=document.getElementById('pct-'+p);
+    if(!btn)return;
+    if(p===pct){btn.style.background='#854F0B';btn.style.color='#fff';btn.style.borderColor='#854F0B';}
+    else{btn.style.background='#fff';btn.style.color='#333';btn.style.borderColor='#ddd';}
+  });
+}
+function setPorcentajeMedioCustom(val){
+  var pct=Math.min(100,Math.max(1,parseInt(val)||50));
+  window._pctMedio=pct;
+  var preview=document.getElementById('pct-preview');
+  if(preview)preview.textContent='= '+pct+'%';
+  [25,50,75].forEach(function(p){
+    var btn=document.getElementById('pct-'+p);
+    if(!btn)return;
+    btn.style.background='#fff';btn.style.color='#333';btn.style.borderColor='#ddd';
+  });
+}
+function confirmarMedioTiempo(){
+  var empId=window._modalEmpId;
+  var empNombre=window._modalEmpNombre;
+  var fecha=window._modalFecha;
+  var pct=window._pctMedio||50;
+  guardarAsisUnica(empId,empNombre,'medio tiempo',fecha,pct);
+  cerrarModalAsis();
+}
+
 function confirmarAsis(estado){
+  if(estado==='medio tiempo'){
+    // Mostrar panel de porcentaje en vez de guardar directo
+    toggleMedioTiempoPanel();
+    return;
+  }
   var empId=window._modalEmpId;
   var empNombre=window._modalEmpNombre;
   var fecha=window._modalFecha;
@@ -2055,6 +2106,20 @@ function confirmarAsis(estado){
 }
 
 function marcarAsisDirecto(personalId, nombre, estado){
+  if(estado==='medio tiempo'){
+    // Abrir modal para elegir porcentaje
+    window._modalEmpId=personalId;
+    window._modalEmpNombre=nombre;
+    window._modalFecha=today();
+    document.getElementById('modal-titulo').textContent='Medio tiempo — '+nombre;
+    document.getElementById('modal-fecha-lbl').textContent=fmtDate(today());
+    document.getElementById('modal-estado-actual').innerHTML='';
+    var modal=document.getElementById('asis-modal');
+    modal.style.display='flex';
+    // Abrir directo al panel
+    setTimeout(function(){toggleMedioTiempoPanel();},50);
+    return;
+  }
   guardarAsisUnica(personalId,nombre,estado,today());
 }
 
@@ -2358,7 +2423,22 @@ function editarPrecio(id,val){
     <div id="modal-estado-actual" style="margin-bottom:12px"></div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <button onclick="confirmarAsis('asistio')" style="background:#185FA5;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;font-family:inherit">✓ Asistio</button>
-      <button onclick="confirmarAsis('medio tiempo')" style="background:#854F0B;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;font-family:inherit">◑ Medio tiempo</button>
+      <button onclick="toggleMedioTiempoPanel()" style="background:#854F0B;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;font-family:inherit">◑ Medio tiempo</button>
+      <!-- Panel porcentaje medio tiempo -->
+      <div id="medio-tiempo-panel" style="display:none;background:#fff8f0;border:2px solid #854F0B;border-radius:10px;padding:12px">
+        <div style="font-size:12px;color:#854F0B;font-weight:700;margin-bottom:8px">% del sueldo a pagar</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button onclick="setPorcentajeMedio(25)" id="pct-25" style="flex:1;padding:7px;border-radius:7px;border:1.5px solid #ddd;background:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">25%</button>
+          <button onclick="setPorcentajeMedio(50)" id="pct-50" style="flex:1;padding:7px;border-radius:7px;border:1.5px solid #854F0B;background:#854F0B;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">50%</button>
+          <button onclick="setPorcentajeMedio(75)" id="pct-75" style="flex:1;padding:7px;border-radius:7px;border:1.5px solid #ddd;background:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">75%</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="font-size:12px;color:#888">Otro %:</span>
+          <input type="number" id="pct-custom" min="1" max="100" placeholder="50" style="width:70px;border:1.5px solid #ddd;border-radius:7px;padding:6px 8px;font-size:14px;font-family:inherit;text-align:center" oninput="setPorcentajeMedioCustom(this.value)">
+          <span style="font-size:13px;color:#555;font-weight:700" id="pct-preview">= 50%</span>
+        </div>
+        <button onclick="confirmarMedioTiempo()" style="width:100%;background:#854F0B;color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Confirmar medio tiempo</button>
+      </div>
       <button onclick="confirmarAsis('no asistio')" style="background:#A32D2D;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;font-family:inherit">✕ No asistio</button>
       <button onclick="cerrarModalAsis()" style="background:#f0ede8;color:#555;border:none;border-radius:10px;padding:11px;font-size:14px;cursor:pointer;font-family:inherit">Cancelar</button>
     </div>
