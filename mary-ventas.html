@@ -998,9 +998,9 @@ function renderPOS(){
     return;
   }
 
-  // Categorias unicas
-  var cats=['todas'];
-  productos.forEach(function(p){if(p.turno&&cats.indexOf(p.turno)<0)cats.push(p.turno);});
+  // Categorias en orden fijo
+  var cats=['todas','desayuno','almuerzo','cena','bebidas','otro'];
+  cats=cats.filter(function(c){return c==='todas'||productos.some(function(p){return p.turno===c;});});
 
   // Productos filtrados
   var filtrados=productos.filter(function(p){
@@ -1035,6 +1035,7 @@ function renderPOS(){
   html+='<option value="almuerzo"'+(turnoAuto==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option>';
   html+='<option value="cena"'+(turnoAuto==='cena'?' selected':'')+'>🌙 Cena</option>';
   html+='<option value="otro">📦 Otro</option>';
+  html+='<option value="bebidas">🥤 Bebidas</option>';
   html+='</select>';
   // Busqueda
   html+='<input type="text" id="pos-busqueda" placeholder="Buscar producto..." value="'+posBusqueda+'" oninput="posBuscar(this.value)" style="flex:1;border:1px solid #e0d5c5;border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit">';
