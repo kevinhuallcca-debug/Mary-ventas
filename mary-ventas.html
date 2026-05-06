@@ -967,10 +967,14 @@ var posCategoria='todas';
 var posBusqueda='';
 function getTurnoAuto(){
   var h=new Date().getHours();
-  if(h>=5&&h<11)return'desayuno';
-  if(h>=11&&h<17)return'almuerzo';
-  return'cena';
+  var m=new Date().getMinutes();
+  var hm=h*60+m;
+  if(hm>=360&&hm<570)return'desayuno';
+  if(hm>=570&&hm<990)return'almuerzo';
+  if(hm>=990&&hm<1200)return'cena';
+  return'almuerzo';
 }
+
 
 function cerrarMesaSinPagar(){
   if(!mesaActiva)return;
@@ -1301,7 +1305,7 @@ function guardarVenta(){
     return db.ref('ventas').push({
       producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,
       precioUnit:it.precioUnit,total:it.subtotal,
-      turno:it.turno||turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts
+      turno:turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts
     });
   });
   Promise.all(promesas).then(function(){
