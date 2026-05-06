@@ -1010,6 +1010,18 @@ function renderPOS(){
     var matchBus=!posBusqueda||p.nombre.toLowerCase().indexOf(posBusqueda.toLowerCase())>=0;
     return matchTurno&&matchCat&&matchBus;
   });
+  // Ordenar por cantidad vendida en historial
+  var contVentas={};
+  ventas.forEach(function(v){
+    if(!contVentas[v.producto])contVentas[v.producto]=0;
+    contVentas[v.producto]+=(v.cantidad||1);
+  });
+  filtrados.sort(function(a,b){
+    var va=contVentas[a.nombre]||0;
+    var vb=contVentas[b.nombre]||0;
+    if(vb!==va)return vb-va;
+    return a.nombre.localeCompare(b.nombre);
+  });
 
   // Carrito (mesa activa o rapido)
   var carrito=modoVenta==='mesas'&&mesaActiva&&mesas[mesaActiva]
@@ -1036,8 +1048,6 @@ function renderPOS(){
   html+='<option value="desayuno"'+(turnoAuto==='desayuno'?' selected':'')+'>🌅 Desayuno</option>';
   html+='<option value="almuerzo"'+(turnoAuto==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option>';
   html+='<option value="cena"'+(turnoAuto==='cena'?' selected':'')+'>🌙 Cena</option>';
-  html+='<option value="otro">📦 Otro</option>';
-  html+='<option value="bebidas">🥤 Bebidas</option>';
   html+='</select>';
   // Busqueda
   html+='<input type="text" id="pos-busqueda" placeholder="Buscar producto..." value="'+posBusqueda+'" oninput="posBuscar(this.value)" style="flex:1;border:1px solid #e0d5c5;border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit">';
