@@ -965,7 +965,18 @@ var mesas={};
 var mesaActiva=null;
 var posCategoria='todas';
 var posBusqueda='';
+function getTurnoAuto(){
+  var h=new Date().getHours();
+  if(h>=5&&h<11)return'desayuno';
+  if(h>=11&&h<17)return'almuerzo';
+  return'cena';
+}
 
+function cerrarMesaSinPagar(){
+  if(!mesaActiva)return;
+  if(!confirm('¿Cancelar esta mesa?'))return;
+  db.ref('mesas/'+mesaActiva).remove().then(function(){mesaActiva=null;renderNueva();});
+}
 function renderNueva(){
   var cont=document.getElementById('nueva');
   cont.innerHTML='<div id="pos-wrap" style="display:flex;gap:0;min-height:500px"></div>';
