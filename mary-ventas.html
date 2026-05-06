@@ -1301,7 +1301,7 @@ function guardarVenta(){
     return db.ref('ventas').push({
       producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,
       precioUnit:it.precioUnit,total:it.subtotal,
-      turno:turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts
+      turno:it.turno||turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts
     });
   });
   Promise.all(promesas).then(function(){
