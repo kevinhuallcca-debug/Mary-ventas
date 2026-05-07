@@ -1163,7 +1163,13 @@ var posPago='efectivo';
 function posSetVista(v){window.posVista=v;renderPOS();}
 function setPosMode(m){modoVenta=m;mesaActiva=null;carritoItems=[];window.posVista='productos';renderPOS();}
 function posSetCat(c){posCategoria=c;renderPOS();}
-function posBuscar(v){posBusqueda=v;renderPOS();}
+function posBuscar(v){
+  posBusqueda=v;
+  renderPOS();
+  // Restaurar foco en el buscador
+  var inp=document.getElementById('pos-busqueda');
+  if(inp){inp.focus();inp.value=v;inp.setSelectionRange(v.length,v.length);}
+}
 function posTurnoChange(){
   var el=document.getElementById('pos-turno');
   if(el)window._turnoSeleccionado=el.value;
