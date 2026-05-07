@@ -706,18 +706,6 @@ function renderEmpView(empId){
   html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#e8e4de"></div><span style="font-size:11px;color:#555">Ya pagado</span></div>';
   html+='</div>';
 
-  // Historial
-  html+='<div class="card"><div class="sl">Mi asistencia</div>';
-  if(asisDesde.length===0){html+='<div class="empty">Sin registros en este periodo</div>';}
-  else{
-    var histSorted=asisDesde.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora);});
-    histSorted.forEach(function(r){
-      var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='descanso pagado'?'<span class="badge bg">Descanso pagado</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo'+(r.montoFijo!=null?' S/ '+r.montoFijo.toFixed(2):'')+' </span>';
-      html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span></div>';
-    });
-  }
-  html+='</div>';
-
   // Adelantos
   html+='<div class="card"><div class="sl">Mis adelantos este mes</div>';
   if(adEmp.length===0){html+='<div class="empty">Sin adelantos este mes</div>';}
@@ -1802,16 +1790,6 @@ function renderSubAsistencia(emp,mes){
   html+='<div class="row"><div class="rn">Descanso pagado</div><div style="font-size:14px;font-weight:600;color:#7b2fff">'+diasDescanso+'</div></div>';
   html+='<div class="row"><div class="rn">Medio tiempo</div><div style="font-size:14px;font-weight:600;color:#854F0B">'+diasMed+'</div></div>';
   html+='<div class="row"><div class="rn">Faltas</div><div style="font-size:14px;font-weight:600;color:#A32D2D">'+diasF.length+'</div></div>';
-  html+='</div>';
-
-  // Historial completo
-  var histAll=asisDesde.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora);});
-  html+='<div class="card"><div class="sl">Historial</div>';
-  if(histAll.length===0){html+='<div class="empty">Sin registros en este periodo</div>';}
-  else{histAll.forEach(function(r){
-    var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='descanso pagado'?'<span class="badge bg">Descanso pagado</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo'+(r.montoFijo!=null?' S/ '+r.montoFijo.toFixed(2):'')+' </span>';
-    html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span><button class="btnd" onclick="eliminarAsis(\''+r.id+'\')">x</button></div>';
-  });}
   html+='</div>';
   return html;
 }
