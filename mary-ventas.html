@@ -1119,7 +1119,7 @@ function renderPOS(){
       html+='<span style="min-width:22px;text-align:center;font-size:14px;font-weight:700">'+it.cantidad+'</span>';
       html+='<button onclick="posCambiarCant('+idx+',1)" style="width:26px;height:26px;border-radius:5px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:16px;line-height:1">+</button>';
       html+='</div>';
-      html+='<div style="min-width:50px;text-align:right;font-size:13px;font-weight:700;color:#0F6E56">'+fmt(it.subtotal)+'</div>';
+      html+='<input type="number" min="0" step="0.50" value="'+it.subtotal.toFixed(2)+'" onchange="posEditarMonto('+idx+',this.value)" style="width:62px;text-align:right;font-size:13px;font-weight:700;color:#0F6E56;border:1px solid #e0d5c5;border-radius:6px;padding:3px 5px;font-family:inherit;background:#fff">';
       html+='<button onclick="posQuitarItem('+idx+')" style="width:22px;height:22px;border-radius:5px;border:none;background:none;cursor:pointer;color:#ccc;font-size:14px">✕</button>';
       html+='</div>';
     });
@@ -1206,6 +1206,23 @@ function posAgregarProducto(prodId){
     else{carritoItems.push({prodId:prod.id,nombre:prod.nombre,cantidad:1,precioUnit:prod.precio,subtotal:prod.precio});}
     // En móvil, cambiar automáticamente al pedido
     if(window.innerWidth<=700){window.posVista='pedido';}
+    renderPOS();
+  }
+}
+
+function posEditarMonto(idx,val){
+  var monto=parseFloat(val);
+  if(isNaN(monto)||monto<0)return;
+  if(modoVenta==='mesas'&&mesaActiva){
+    var m=mesas[mesaActiva];
+    var items=Array.isArray(m.items)?m.items.slice():(m.items?Object.values(m.items):[]);
+    var pend=items.filter(function(it){return !it.cobrado;});
+    if(!pend[idx])return;
+    var realIdx=items.indexOf(pend[idx]);
+    items[realIdx].subtotal=monto;
+    db.ref('mesas/'+mesaActiva).update({items:items,ultimoEditor:currentUser?currentUser.nombre:''});
+  } else {
+    carritoItems[idx].subtotal=monto;
     renderPOS();
   }
 }
