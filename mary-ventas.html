@@ -1015,7 +1015,7 @@ function renderPOS(){
     :carritoItems;
   var pendientes=carrito.filter(function(it){return !it.cobrado;});
   var total=pendientes.reduce(function(a,it){return a+it.subtotal;},0);
-  var turnoAuto=getTurnoAuto();
+  var turnoAuto=window._turnoSeleccionado||getTurnoAuto();
   var mesaActObj=modoVenta==='mesas'&&mesaActiva?mesas[mesaActiva]:null;
   var pagoVal=mesaActObj?mesaActObj.pago||'efectivo':posPago;
 
@@ -1160,7 +1160,11 @@ function posSetVista(v){window.posVista=v;renderPOS();}
 function setPosMode(m){modoVenta=m;mesaActiva=null;carritoItems=[];window.posVista='productos';renderPOS();}
 function posSetCat(c){posCategoria=c;renderPOS();}
 function posBuscar(v){posBusqueda=v;renderPOS();}
-function posTurnoChange(){renderPOS();}
+function posTurnoChange(){
+  var el=document.getElementById('pos-turno');
+  if(el)window._turnoSeleccionado=el.value;
+  renderPOS();
+}
 
 function posSelMesa(mid){
   mesaActiva=mid;
