@@ -646,13 +646,17 @@ function renderEmpView(empId){
   html+='<div style="padding:0 1rem"><div class="readonly-note" style="margin:0 0 1rem">Vista de solo lectura</div></div>';
 
   // Resumen desde ultimo pago
+  var diasCompletosEmp=diasT.filter(function(f){return !asisDesde.some(function(a){return a.fecha===f&&(a.estado==='medio tiempo'||a.estado==='descanso pagado');});}).length;
+  var diasDescansoEmp=asisDesde.filter(function(a){return a.estado==='descanso pagado';}).length;
   html+='<div class="card"><div class="sl">Mi resumen</div>';
   if(ultimoPago){html+='<div style="font-size:12px;color:#0F6E56;margin-bottom:8px">Desde: '+fmtDate(ultimoPago)+'</div>';}
   html+='<div class="resumen-box">';
   html+='<div class="resumen-row"><span>Sueldo por día</span><span style="color:#0F6E56">'+fmt(sueldoDiaEmp)+'/día</span></div>';
-  html+='<div class="resumen-row"><span>Dias trabajados</span><span>'+diasT.length+' días · '+fmt(ganadoEmp)+'</span></div>';
-  html+='<div class="resumen-row"><span>Medio tiempo</span><span style="color:#854F0B">'+diasMed+' días (½ sueldo)</span></div>';
-  html+='<div class="resumen-row"><span>Faltas</span><span style="color:#A32D2D">'+diasF.length+' días</span></div>';
+  html+='<div class="resumen-row"><span>Días completos trabajados</span><span>'+diasCompletosEmp+' días</span></div>';
+  if(diasDescansoEmp>0){html+='<div class="resumen-row"><span>Descanso pagado</span><span style="color:#7b2fff">'+diasDescansoEmp+' días</span></div>';}
+  if(diasMed>0){html+='<div class="resumen-row"><span>Medio tiempo</span><span style="color:#854F0B">'+diasMed+' días</span></div>';}
+  html+='<div class="resumen-row"><span>Faltas</span><span style="color:'+(diasF.length>0?'#A32D2D':'#888')+'">'+diasF.length+' días</span></div>';
+  html+='<div class="resumen-row"><span>Total ganado</span><span style="color:#0F6E56">'+fmt(ganadoEmp)+'</span></div>';
   html+='<div class="resumen-row"><span>Adelantos</span><span style="color:#854F0B">- '+fmt(totalAd)+'</span></div>';
   html+='<div class="resumen-row total"><span>Saldo a cobrar</span><span style="color:'+(saldo<0?'#cc3333':'#0F6E56')+'">'+fmt(saldo)+'</span></div>';
   html+='</div></div>';
@@ -1786,10 +1790,11 @@ function renderSubAsistencia(emp,mes){
   html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:#e8e4de"></div><span style="font-size:11px;color:#555">Ya pagado</span></div>';
   html+='</div>';
   var diasDescanso=asisDesde.filter(function(a){return a.estado==='descanso pagado';}).length;
-  html+='<div class="row"><div class="rn">Dias trabajados</div><div class="ra">'+diasT.length+'</div></div>';
-  html+='<div class="row"><div class="rn">Descanso pagado</div><div style="font-size:14px;font-weight:600;color:#7b2fff">'+diasDescanso+'</div></div>';
-  html+='<div class="row"><div class="rn">Medio tiempo</div><div style="font-size:14px;font-weight:600;color:#854F0B">'+diasMed+'</div></div>';
-  html+='<div class="row"><div class="rn">Faltas</div><div style="font-size:14px;font-weight:600;color:#A32D2D">'+diasF.length+'</div></div>';
+  var diasCompletosT=diasT.filter(function(f){return !asisDesde.some(function(a){return a.fecha===f&&(a.estado==='medio tiempo'||a.estado==='descanso pagado');});}).length;
+  html+='<div class="row"><div class="rn">Días completos trabajados</div><div class="ra">'+diasCompletosT+'</div></div>';
+  if(diasDescanso>0){html+='<div class="row"><div class="rn">Descanso pagado</div><div style="font-size:14px;font-weight:600;color:#7b2fff">'+diasDescanso+'</div></div>';}
+  if(diasMed>0){html+='<div class="row"><div class="rn">Medio tiempo</div><div style="font-size:14px;font-weight:600;color:#854F0B">'+diasMed+'</div></div>';}
+  html+='<div class="row"><div class="rn">Faltas</div><div style="font-size:14px;font-weight:600;color:'+(diasF.length>0?'#A32D2D':'#888')+'">'+diasF.length+'</div></div>';
   html+='</div>';
   return html;
 }
