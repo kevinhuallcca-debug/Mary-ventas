@@ -139,28 +139,12 @@ body{font-family:'Nunito',sans-serif;background:#f0f2f5;color:#1a1a2e;min-height
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#d0d4e0;border-radius:4px}
-/* ── RESPONSIVE ── */
 @media(max-width:700px){
   .metrics{grid-template-columns:repeat(2,1fr)}
   .g2{grid-template-columns:1fr}
   .card{margin:.6rem}
   .content-area{padding:8px 10px}
-  /* POS mobile: ocultar columna derecha por defecto, mostrar via tab */
-  #pos-col-left{width:100%!important;border-right:none!important}
-  #pos-col-right{display:none!important;width:100%!important}
-  #pos-col-right.show{display:flex!important;flex-direction:column}
-  #pos-col-left.hide{display:none!important}
-  #pos-wrap{flex-direction:column!important}
-  /* Tab buttons del POS mobile */
-  .pos-tabs-mobile{display:flex!important}
-  /* grid de productos: 2 columnas en mobile */
-  #pos-grid-productos{grid-template-columns:repeat(2,1fr)!important}
-  /* carrito panel full width */
-  #pos-carrito-panel{width:100%!important}
-}
-@media(min-width:701px){
-  .pos-tabs-mobile{display:none!important}
-  #pos-col-right{display:flex!important;flex-direction:column}
+  .pos-grid{grid-template-columns:repeat(2,1fr)!important}
 }
 </style>
 </head>
@@ -649,7 +633,7 @@ function renderEmpView(empId){
   diasT.forEach(function(f){
     var s=getSueldoEmp(f);
     var esMed=asisDesde.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
-    if(esMed){var regMed=asisDesde.find(function(a){return a.fecha===f&&a.estado==='medio tiempo';});ganadoEmp+=s*((regMed&&regMed.porcentaje||50)/100);}else{ganadoEmp+=s;}
+    if(esMed){var rm=asisDesde.find(function(a){return a.fecha===f&&a.estado==='medio tiempo';});ganadoEmp+=s*((rm&&rm.porcentaje||50)/100);}else{ganadoEmp+=s;}
   });
   var saldo=ganadoEmp-totalAd;
 
@@ -724,7 +708,7 @@ function renderEmpView(empId){
   else{
     var histSorted=asisDesde.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora);});
     histSorted.forEach(function(r){
-      var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo '+(r.porcentaje||50)+'%</span>';
+      var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo</span>';
       html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span></div>';
     });
   }
@@ -1005,86 +989,91 @@ function cerrarMesaSinPagar(){
 }
 function renderNueva(){
   var cont=document.getElementById('nueva');
-  cont.innerHTML='<div id="pos-wrap" style="display:flex;flex-direction:column;min-height:500px"></div>';
+  // posVista: 'productos' | 'pedido'  — solo relevante en móvil
+  if(!window.posVista) window.posVista='productos';
+  cont.innerHTML='<div id="pos-root"></div>';
   renderPOS();
 }
 
 function renderPOS(){
   try{
-  var wrap=document.getElementById('pos-wrap');
-  if(!wrap)return;
+  var root=document.getElementById('pos-root');
+  if(!root)return;
 
   if(productos.length===0){
-    wrap.innerHTML='<div style="flex:1;text-align:center;padding:60px;color:#aaa"><div style="font-size:40px;margin-bottom:12px">⏳</div><div style="font-size:14px">Cargando productos...</div></div>';
+    root.innerHTML='<div style="text-align:center;padding:60px;color:#aaa"><div style="font-size:40px;margin-bottom:12px">⏳</div><div style="font-size:14px">Cargando productos...</div></div>';
     setTimeout(function(){if(activeTab==='nueva'&&productos.length>0)renderNueva();},500);
     return;
   }
 
-  // Categorias unicas
-  var cats=['todas'];
-  productos.forEach(function(p){if(p.turno&&cats.indexOf(p.turno)<0)cats.push(p.turno);});
+  var isMobile=window.innerWidth<=700;
+  var vista=window.posVista||'productos';
 
-  // Productos filtrados
-  var filtrados=productos.filter(function(p){
-    var matchCat=posCategoria==='todas'||p.turno===posCategoria;
-    var matchBus=!posBusqueda||p.nombre.toLowerCase().indexOf(posBusqueda.toLowerCase())>=0;
-    return matchCat&&matchBus;
-  });
-
-  // Carrito (mesa activa o rapido)
+  // Carrito activo
   var carrito=modoVenta==='mesas'&&mesaActiva&&mesas[mesaActiva]
     ?(Array.isArray(mesas[mesaActiva].items)?mesas[mesaActiva].items:(mesas[mesaActiva].items?Object.values(mesas[mesaActiva].items):[]))
     :carritoItems;
-  var total=carrito.reduce(function(a,it){return a+it.subtotal;},0);
-
+  var pendientes=carrito.filter(function(it){return !it.cobrado;});
+  var total=pendientes.reduce(function(a,it){return a+it.subtotal;},0);
   var turnoAuto=getTurnoAuto();
   var mesaActObj=modoVenta==='mesas'&&mesaActiva?mesas[mesaActiva]:null;
+  var pagoVal=mesaActObj?mesaActObj.pago||'efectivo':posPago;
+
+  // Categorias
+  var cats=['todas'];
+  productos.forEach(function(p){if(p.turno&&cats.indexOf(p.turno)<0)cats.push(p.turno);});
+  var filtrados=productos.filter(function(p){
+    return (posCategoria==='todas'||p.turno===posCategoria)&&
+           (!posBusqueda||p.nombre.toLowerCase().indexOf(posBusqueda.toLowerCase())>=0);
+  });
 
   var html='';
-  var posTab=window._posTab||'productos';
-  var cartCount=carrito.filter(function(it){return !it.cobrado;}).length;
 
-  // ── TABS MOBILE (solo visibles en móvil via CSS) ──
-  html+='<div class="pos-tabs-mobile" style="background:#fff;border-bottom:2px solid #f0e8d8;flex-shrink:0;width:100%">';
-  html+='<button onclick="setPosTab(\'productos\')" style="flex:1;padding:11px 0;border:none;border-bottom:3px solid '+(posTab==='productos'?'#8b0000':'transparent')+';background:none;font-size:14px;font-weight:700;cursor:pointer;color:'+(posTab==='productos'?'#8b0000':'#999')+';font-family:inherit;width:50%">🍽️ Productos</button>';
-  html+='<button onclick="setPosTab(\'pedido\')" style="flex:1;padding:11px 0;border:none;border-bottom:3px solid '+(posTab==='pedido'?'#8b0000':'transparent')+';background:none;font-size:14px;font-weight:700;cursor:pointer;color:'+(posTab==='pedido'?'#8b0000':'#999')+';font-family:inherit;width:50%">🛒 Pedido'+(cartCount>0?' <span style="background:#8b0000;color:#fff;border-radius:10px;padding:1px 7px;font-size:12px">'+cartCount+'</span>':'')+'</button>';
-  html+='</div>';
+  // ── TABS MÓVIL ──────────────────────────────────────────────
+  if(isMobile){
+    var cnt=pendientes.length;
+    html+='<div style="display:flex;background:#fff;border-bottom:2px solid #f0e8d8;position:sticky;top:42px;z-index:40">';
+    html+='<button onclick="posSetVista(\'productos\')" style="flex:1;padding:11px 0;border:none;border-bottom:3px solid '+(vista==='productos'?'#8b0000':'transparent')+';background:none;font-size:14px;font-weight:700;cursor:pointer;color:'+(vista==='productos'?'#8b0000':'#999')+';font-family:inherit">🍽️ Productos</button>';
+    html+='<button onclick="posSetVista(\'pedido\')" style="flex:1;padding:11px 0;border:none;border-bottom:3px solid '+(vista==='pedido'?'#8b0000':'transparent')+';background:none;font-size:14px;font-weight:700;cursor:pointer;color:'+(vista==='pedido'?'#8b0000':'#999')+';font-family:inherit">🛒 Pedido'+(cnt>0?' <span style="background:#8b0000;color:#fff;border-radius:10px;padding:1px 7px;font-size:12px">'+cnt+'</span>':'')+'</button>';
+    html+='</div>';
+  }
 
-  // ── COLUMNA IZQUIERDA: productos ──
-  html+='<div id="pos-col-left" style="flex:1;display:flex;flex-direction:column;border-right:1px solid #f0e8d8">';
+  // ── LAYOUT WRAPPER ───────────────────────────────────────────
+  html+='<div style="display:flex;flex-direction:'+(isMobile?'column':'row')+';min-height:500px">';
 
-  // Barra superior: modo + turno
-  html+='<div style="padding:10px 12px;border-bottom:1px solid #f0e8d8;display:flex;gap:8px;align-items:center;flex-shrink:0">';
+  // ════════════ PANEL IZQUIERDO — PRODUCTOS ════════════
+  var showLeft=!isMobile||(isMobile&&vista==='productos');
+  html+='<div style="flex:1;display:'+(showLeft?'flex':'none')+';flex-direction:column;border-right:'+(isMobile?'none':'1px solid #f0e8d8')+'">';
+
+  // Barra modo + turno + búsqueda
+  html+='<div style="padding:10px 12px;border-bottom:1px solid #f0e8d8;display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex-shrink:0">';
   html+='<div style="display:flex;border-radius:8px;overflow:hidden;border:1.5px solid #8b0000;flex-shrink:0">';
-  html+='<button onclick="setPosMode(\'rapido\')" style="padding:7px 12px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(modoVenta==='rapido'?'#8b0000':'#fff')+';color:'+(modoVenta==='rapido'?'#fff':'#8b0000')+'">⚡ Rápido</button>';
-  html+='<button onclick="setPosMode(\'mesas\')" style="padding:7px 12px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(modoVenta==='mesas'?'#8b0000':'#fff')+';color:'+(modoVenta==='mesas'?'#fff':'#8b0000')+'">🪑 Mesas</button>';
+  html+='<button onclick="setPosMode(\'rapido\')" style="padding:7px 10px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(modoVenta==='rapido'?'#8b0000':'#fff')+';color:'+(modoVenta==='rapido'?'#fff':'#8b0000')+'">⚡ Rápido</button>';
+  html+='<button onclick="setPosMode(\'mesas\')" style="padding:7px 10px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(modoVenta==='mesas'?'#8b0000':'#fff')+';color:'+(modoVenta==='mesas'?'#fff':'#8b0000')+'">🪑 Mesas</button>';
   html+='</div>';
-  // Turno selector
-  html+='<select id="pos-turno" onchange="posTurnoChange()" style="border:1px solid #e0d5c5;border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit;flex-shrink:0">';
+  html+='<select id="pos-turno" onchange="posTurnoChange()" style="border:1px solid #e0d5c5;border-radius:8px;padding:6px 8px;font-size:12px;font-family:inherit">';
   html+='<option value="desayuno"'+(turnoAuto==='desayuno'?' selected':'')+'>🌅 Desayuno</option>';
   html+='<option value="almuerzo"'+(turnoAuto==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option>';
   html+='<option value="cena"'+(turnoAuto==='cena'?' selected':'')+'>🌙 Cena</option>';
   html+='<option value="otro">📦 Otro</option>';
   html+='</select>';
-  // Busqueda
-  html+='<input type="text" id="pos-busqueda" placeholder="Buscar producto..." value="'+posBusqueda+'" oninput="posBuscar(this.value)" style="flex:1;border:1px solid #e0d5c5;border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit">';
+  html+='<input type="text" id="pos-busqueda" placeholder="Buscar..." value="'+posBusqueda+'" oninput="posBuscar(this.value)" style="flex:1;min-width:80px;border:1px solid #e0d5c5;border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit">';
   html+='</div>';
 
-  // Categorias
+  // Categorías
   html+='<div style="display:flex;gap:6px;padding:8px 12px;overflow-x:auto;flex-shrink:0;border-bottom:1px solid #f0e8d8">';
   cats.forEach(function(c){
-    var label=c==='todas'?'Todas':turnoLabel(c);
-    html+='<button onclick="posSetCat(\''+c+'\')" style="white-space:nowrap;padding:5px 14px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(posCategoria===c?'#8b0000':'#f0e8d8')+';color:'+(posCategoria===c?'#fff':'#555')+'">'+label+'</button>';
+    html+='<button onclick="posSetCat(\''+c+'\')" style="white-space:nowrap;padding:5px 14px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(posCategoria===c?'#8b0000':'#f0e8d8')+';color:'+(posCategoria===c?'#fff':'#555')+'">'+(c==='todas'?'Todas':turnoLabel(c))+'</button>';
   });
   html+='</div>';
 
-  // Grid de productos
-  html+='<div id="pos-grid-productos" style="padding:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-content:start;overflow-y:auto">';
+  // Grid productos
+  html+='<div class="pos-grid" style="padding:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;overflow-y:auto">';
   if(filtrados.length===0){
     html+='<div style="grid-column:1/-1;text-align:center;color:#bbb;padding:30px;font-size:13px">Sin productos</div>';
   }
   filtrados.forEach(function(p){
-    html+='<button onclick="posAgregarProducto(\''+p.id+'\')" style="background:#fff;border:1.5px solid #e0d5c5;border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-family:inherit;transition:background 0.1s">';
+    html+='<button onclick="posAgregarProducto(\''+p.id+'\')" style="background:#fff;border:1.5px solid #e0d5c5;border-radius:10px;padding:12px 6px;cursor:pointer;text-align:center;font-family:inherit">';
     html+='<div style="font-size:13px;font-weight:700;color:#333;margin-bottom:4px;line-height:1.2">'+p.nombre+'</div>';
     html+='<div style="font-size:15px;font-weight:700;color:#8b0000">'+fmt(p.precio)+'</div>';
     html+='<div style="font-size:10px;color:#aaa;margin-top:2px">'+turnoLabel(p.turno||'otro')+'</div>';
@@ -1092,105 +1081,83 @@ function renderPOS(){
   });
   html+='</div></div>';
 
-  // ── COLUMNA DERECHA: carrito ──
-  html+='<div id="pos-col-right" style="width:250px;background:#fdf8f0;flex-shrink:0;display:flex;flex-direction:column">';
+  // ════════════ PANEL DERECHO — PEDIDO ════════════
+  var showRight=!isMobile||(isMobile&&vista==='pedido');
+  html+='<div style="'+(isMobile?'width:100%':'width:260px')+';background:#fdf8f0;flex-shrink:0;display:'+(showRight?'flex':'none')+';flex-direction:column">';
 
-  // Header carrito
+  // Header pedido
   html+='<div style="padding:10px 12px;border-bottom:1px solid #f0e8d8;flex-shrink:0">';
   if(modoVenta==='mesas'){
-    // Selector de mesa
-    html+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">';
-    var mesaIds=['mesa_1','mesa_2','mesa_3','mesa_4','mesa_5','mesa_6','mesa_7','mesa_8','mesa_9'];
-    mesaIds.forEach(function(mid,i){
+    html+='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">';
+    ['mesa_1','mesa_2','mesa_3','mesa_4','mesa_5','mesa_6','mesa_7','mesa_8','mesa_9'].forEach(function(mid,i){
       var m=mesas[mid];
-      var mitems=m?(Array.isArray(m.items)?m.items:(m.items?Object.values(m.items):[])): [];
-      var tieneItems=mitems.filter(function(it){return !it.cobrado;}).length>0;
-      html+='<button onclick="posSelMesa(\''+mid+'\')" style="width:40px;height:40px;border-radius:8px;border:2px solid '+(mesaActiva===mid?'#8b0000':tieneItems?'#0F6E56':'#e0d5c5')+';background:'+(mesaActiva===mid?'#8b0000':tieneItems?'#f0faf5':'#fff')+';color:'+(mesaActiva===mid?'#fff':tieneItems?'#0F6E56':'#888')+';font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">'+(i+1)+'</button>';
+      var mi=m?(Array.isArray(m.items)?m.items:(m.items?Object.values(m.items):[])):[];
+      var tiene=mi.filter(function(it){return !it.cobrado;}).length>0;
+      html+='<button onclick="posSelMesa(\''+mid+'\')" style="width:38px;height:38px;border-radius:8px;border:2px solid '+(mesaActiva===mid?'#8b0000':tiene?'#0F6E56':'#e0d5c5')+';background:'+(mesaActiva===mid?'#8b0000':tiene?'#f0faf5':'#fff')+';color:'+(mesaActiva===mid?'#fff':tiene?'#0F6E56':'#888')+';font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">'+(i+1)+'</button>';
     });
     html+='</div>';
-    if(mesaActiva){
-      html+='<div style="font-size:13px;font-weight:700;color:#8b0000">Mesa '+(mesaActiva.replace('mesa_',''))+' '+( mesaActObj&&mesaActObj.ultimoEditor?'· '+mesaActObj.ultimoEditor:'')+'</div>';
-    } else {
-      html+='<div style="font-size:12px;color:#aaa">Toca una mesa para editarla</div>';
-    }
+    html+='<div style="font-size:13px;font-weight:700;color:#8b0000">'+(mesaActiva?'Mesa '+(mesaActiva.replace('mesa_',''))+(mesaActObj&&mesaActObj.ultimoEditor?' · '+mesaActObj.ultimoEditor:''):'Toca una mesa')+'</div>';
   } else {
     html+='<div style="font-size:14px;font-weight:700;color:#333">🛒 Pedido</div>';
   }
   html+='</div>';
 
-  // Lista carrito
-  html+='<div style="padding:8px">';
-  if(carrito.length===0){
+  // Lista items
+  html+='<div style="flex:1;overflow-y:auto;padding:8px">';
+  if(pendientes.length===0){
     html+='<div style="text-align:center;color:#ccc;padding:30px 10px;font-size:13px">'+(modoVenta==='mesas'&&!mesaActiva?'Selecciona una mesa':'Agrega productos')+'</div>';
   } else {
-    carrito.forEach(function(it,idx){
-      if(it.cobrado)return;
+    pendientes.forEach(function(it,idx){
       html+='<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:0.5px solid #f0e8d8">';
       html+='<div style="flex:1"><div style="font-size:12px;font-weight:600;color:#333">'+it.nombre+'</div>';
       html+='<div style="font-size:11px;color:#aaa">'+fmt(it.precioUnit)+' c/u</div></div>';
       html+='<div style="display:flex;align-items:center;gap:3px">';
-      html+='<button onclick="posCambiarCant('+idx+',-1)" style="width:24px;height:24px;border-radius:5px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:14px">−</button>';
-      html+='<span style="min-width:20px;text-align:center;font-size:13px;font-weight:600">'+it.cantidad+'</span>';
-      html+='<button onclick="posCambiarCant('+idx+',1)" style="width:24px;height:24px;border-radius:5px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:14px">+</button>';
+      html+='<button onclick="posCambiarCant('+idx+',-1)" style="width:26px;height:26px;border-radius:5px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:16px;line-height:1">−</button>';
+      html+='<span style="min-width:22px;text-align:center;font-size:14px;font-weight:700">'+it.cantidad+'</span>';
+      html+='<button onclick="posCambiarCant('+idx+',1)" style="width:26px;height:26px;border-radius:5px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:16px;line-height:1">+</button>';
       html+='</div>';
-      html+='<div style="min-width:48px;text-align:right;font-size:13px;font-weight:700;color:#0F6E56">'+fmt(it.subtotal)+'</div>';
-      html+='<button onclick="posQuitarItem('+idx+')" style="width:22px;height:22px;border-radius:5px;border:none;background:none;cursor:pointer;color:#ddd;font-size:14px">✕</button>';
+      html+='<div style="min-width:50px;text-align:right;font-size:13px;font-weight:700;color:#0F6E56">'+fmt(it.subtotal)+'</div>';
+      html+='<button onclick="posQuitarItem('+idx+')" style="width:22px;height:22px;border-radius:5px;border:none;background:none;cursor:pointer;color:#ccc;font-size:14px">✕</button>';
       html+='</div>';
     });
   }
   html+='</div>';
 
-  // Footer: pago + total + botón
+  // Footer pago
   html+='<div style="padding:10px 12px;border-top:1px solid #f0e8d8;flex-shrink:0">';
   html+='<div style="display:flex;gap:6px;margin-bottom:8px">';
-  var pagoVal=(modoVenta==='mesas'&&mesaActObj)?mesaActObj.pago||'efectivo':'efectivo';
-  html+='<button id="btn-ef" onclick="posSetPago(\'efectivo\')" style="flex:1;padding:7px;border-radius:8px;border:2px solid '+(pagoVal==='efectivo'?'#8b0000':'#e0d5c5')+';background:'+(pagoVal==='efectivo'?'#8b0000':'#fff')+';color:'+(pagoVal==='efectivo'?'#fff':'#888')+';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">💵 Efectivo</button>';
-  html+='<button id="btn-yp" onclick="posSetPago(\'yape\')" style="flex:1;padding:7px;border-radius:8px;border:2px solid '+(pagoVal==='yape'?'#8b0000':'#e0d5c5')+';background:'+(pagoVal==='yape'?'#8b0000':'#fff')+';color:'+(pagoVal==='yape'?'#fff':'#888')+';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">💜 Yape</button>';
+  html+='<button onclick="posSetPago(\'efectivo\')" style="flex:1;padding:9px;border-radius:8px;border:2px solid '+(pagoVal==='efectivo'?'#8b0000':'#e0d5c5')+';background:'+(pagoVal==='efectivo'?'#8b0000':'#fff')+';color:'+(pagoVal==='efectivo'?'#fff':'#888')+';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">💵 Efectivo</button>';
+  html+='<button onclick="posSetPago(\'yape\')" style="flex:1;padding:9px;border-radius:8px;border:2px solid '+(pagoVal==='yape'?'#8b0000':'#e0d5c5')+';background:'+(pagoVal==='yape'?'#8b0000':'#fff')+';color:'+(pagoVal==='yape'?'#fff':'#888')+';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">💜 Yape</button>';
   html+='</div>';
-  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
   html+='<span style="font-size:12px;color:#888">TOTAL</span>';
-  html+='<span style="font-size:24px;font-weight:700;color:#8b0000">'+fmt(total)+'</span>';
+  html+='<span style="font-size:26px;font-weight:700;color:#8b0000">'+fmt(total)+'</span>';
   html+='</div>';
-  if(carrito.length>0){
-    html+='<button onclick="posRegistrar()" style="width:100%;background:#8b0000;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">✓ GENERAR VENTA</button>';
+  if(pendientes.length>0){
+    html+='<button onclick="posRegistrar()" style="width:100%;background:#8b0000;color:#fff;border:none;border-radius:10px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">✓ GENERAR VENTA</button>';
     if(modoVenta==='mesas'&&mesaActiva){
       html+='<button onclick="posCobrarParcial()" style="width:100%;background:#854F0B;color:#fff;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px">💳 Cobro parcial</button>';
       html+='<button onclick="cerrarMesaSinPagar()" style="width:100%;background:none;border:1px solid #ddd;border-radius:8px;padding:7px;font-size:11px;cursor:pointer;color:#aaa;font-family:inherit;margin-top:4px">Cancelar mesa</button>';
     }
   }
   html+='</div>';
-  html+='</div>';
+  html+='</div>'; // cierra panel derecho
 
-  wrap.innerHTML=html;
-  // En desktop, el wrap debe ser row
-  if(window.innerWidth>700){wrap.style.flexDirection='row';}else{wrap.style.flexDirection='column';}
-  applyPosTabVisibility();
-  }catch(e){document.getElementById('pos-wrap').innerHTML='<div style="padding:20px;color:red">ERROR: '+e.message+'</div>';console.error(e);}
+  html+='</div>'; // cierra layout wrapper
+
+  root.innerHTML=html;
+  }catch(e){
+    var r=document.getElementById('pos-root');
+    if(r)r.innerHTML='<div style="padding:20px;color:red">ERROR: '+e.message+'</div>';
+    console.error(e);
+  }
 }
 
 // POS helpers
 var posPago='efectivo';
 
-function setPosMode(m){modoVenta=m;mesaActiva=null;carritoItems=[];renderPOS();}
-window.addEventListener('resize',function(){if(activeTab==='nueva')applyPosTabVisibility();});
-function setPosTab(t){window._posTab=t;renderPOS();applyPosTabVisibility();}
-function applyPosTabVisibility(){
-  var t=window._posTab||'productos';
-  var l=document.getElementById('pos-col-left');
-  var r=document.getElementById('pos-col-right');
-  if(!l||!r)return;
-  var mobile=window.innerWidth<=700;
-  if(mobile){
-    l.style.display=t==='productos'?'flex':'none';
-    r.style.display=t==='pedido'?'flex':'none';
-    r.style.flexDirection='column';
-    r.style.width='100%';
-  } else {
-    l.style.display='flex';
-    r.style.display='flex';
-    r.style.width='250px';
-  }
-}
+function posSetVista(v){window.posVista=v;renderPOS();}
+function setPosMode(m){modoVenta=m;mesaActiva=null;carritoItems=[];window.posVista='productos';renderPOS();}
 function posSetCat(c){posCategoria=c;renderPOS();}
 function posBuscar(v){posBusqueda=v;renderPOS();}
 function posTurnoChange(){renderPOS();}
@@ -1225,11 +1192,13 @@ function posAgregarProducto(prodId){
     else{items.push({prodId:prod.id,nombre:prod.nombre,cantidad:1,precioUnit:prod.precio,subtotal:prod.precio});}
     var turnoEl=document.getElementById('pos-turno');
     db.ref('mesas/'+mesaActiva).update({items:items,turno:turnoEl?turnoEl.value:getTurnoAuto(),ultimoEditor:currentUser?currentUser.nombre:''});
+    if(window.innerWidth<=700){window.posVista='pedido';}
   } else {
     var existe2=carritoItems.findIndex(function(it){return it.prodId===prod.id&&it.precioUnit===prod.precio;});
     if(existe2>=0){carritoItems[existe2].cantidad++;carritoItems[existe2].subtotal=carritoItems[existe2].cantidad*carritoItems[existe2].precioUnit;}
     else{carritoItems.push({prodId:prod.id,nombre:prod.nombre,cantidad:1,precioUnit:prod.precio,subtotal:prod.precio});}
-    if(window.innerWidth<=700){window._posTab='pedido';}
+    // En móvil, cambiar automáticamente al pedido
+    if(window.innerWidth<=700){window.posVista='pedido';}
     renderPOS();
   }
 }
@@ -1633,7 +1602,7 @@ function renderPersonalList(){
     diasTL.forEach(function(f){
       var s=getSueldoDiaL(f);
       var esMedioL=asisEmpL.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
-      if(esMedioL){var regMedL=asisEmpL.find(function(a){return a.fecha===f&&a.estado==='medio tiempo';});ganadoL+=s*((regMedL&&regMedL.porcentaje||50)/100);}else{ganadoL+=s;}
+      if(esMedioL){var rmL=asisEmpL.find(function(a){return a.fecha===f&&a.estado==='medio tiempo';});ganadoL+=s*((rmL&&rmL.porcentaje||50)/100);}else{ganadoL+=s;}
     });
     var totalAd=adelantos.filter(function(a){return a.personalId===p.id&&!a.liquidado&&(!ultimoPagoL||a.fecha>ultimoPagoL)}).reduce(function(a,x){return a+x.monto},0);
     var saldo=ganadoL-totalAd;
@@ -1801,7 +1770,7 @@ function renderSubAsistencia(emp,mes){
   html+='<div class="card"><div class="sl">Historial</div>';
   if(histAll.length===0){html+='<div class="empty">Sin registros en este periodo</div>';}
   else{histAll.forEach(function(r){
-    var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo '+(r.porcentaje||50)+'%</span>';
+    var badge=r.estado==='asistio'?'<span class="badge bd">Asistio</span>':r.estado==='no asistio'?'<span class="badge br">No asistio</span>':'<span class="badge ba">Medio tiempo</span>';
     html+='<div class="row">'+badge+'<span style="font-size:12px;color:#888">'+fmtDate(r.fecha)+' '+r.hora+'</span><button class="btnd" onclick="eliminarAsis(\''+r.id+'\')">x</button></div>';
   });}
   html+='</div>';
@@ -1894,9 +1863,9 @@ function renderSubLiquidacion(emp,mes){
   var ganado=0;
   diasT.forEach(function(f){
     var s=getSueldoParaDia(f);
-    // medio tiempo = mitad
+    // medio tiempo = porcentaje configurable (default 50%)
     var esMedio=asisTotal.some(function(a){return a.fecha===f&&a.estado==='medio tiempo';});
-    if(esMedio){var regMedT=asisTotal.find(function(a){return a.fecha===f&&a.estado==='medio tiempo';});ganado+=s*((regMedT&&regMedT.porcentaje||50)/100);}else{ganado+=s;}
+    if(esMedio){var rmT=asisTotal.find(function(a){return a.fecha===f&&a.estado==='medio tiempo';});ganado+=s*((rmT&&rmT.porcentaje||50)/100);}else{ganado+=s;}
   });
   var saldo=ganado-totalAd;
 
@@ -2037,21 +2006,19 @@ function cerrarModalAsis(){
 }
 
 function guardarAsisUnica(personalId, nombre, estado, fecha, porcentaje){
-  // Buscar si ya existe registro para ese dia y empleado
   var existentes=asistencias.filter(function(a){return a.personalId===personalId&&a.fecha===fecha;});
   var promises=existentes.map(function(a){return db.ref('asistencias/'+a.id).remove();});
   var data={personalId:personalId,nombre:nombre,estado:estado,fecha:fecha,hora:nowTime(),timestamp:new Date().toISOString()};
   if(estado==='medio tiempo'){data.porcentaje=porcentaje||50;}
   Promise.all(promises).then(function(){
-    db.ref('asistencias').push(data)
-      .then(function(){
-        var label=estado==='medio tiempo'?estado+' ('+data.porcentaje+'%)':estado;
-        showToast(nombre+' — '+label);
-      });
+    db.ref('asistencias').push(data).then(function(){
+      var label=estado==='medio tiempo'?estado+' ('+data.porcentaje+'%)':estado;
+      showToast(nombre+' — '+label);
+    });
   });
 }
 
-// Helpers del panel de medio tiempo
+// ── Helpers panel medio tiempo ────────────────────────────────
 window._pctMedio=50;
 function toggleMedioTiempoPanel(){
   var panel=document.getElementById('medio-tiempo-panel');
@@ -2084,39 +2051,23 @@ function setPorcentajeMedioCustom(val){
   });
 }
 function confirmarMedioTiempo(){
-  var empId=window._modalEmpId;
-  var empNombre=window._modalEmpNombre;
-  var fecha=window._modalFecha;
-  var pct=window._pctMedio||50;
-  guardarAsisUnica(empId,empNombre,'medio tiempo',fecha,pct);
+  guardarAsisUnica(window._modalEmpId,window._modalEmpNombre,'medio tiempo',window._modalFecha,window._pctMedio||50);
   cerrarModalAsis();
 }
 
 function confirmarAsis(estado){
-  if(estado==='medio tiempo'){
-    // Mostrar panel de porcentaje en vez de guardar directo
-    toggleMedioTiempoPanel();
-    return;
-  }
-  var empId=window._modalEmpId;
-  var empNombre=window._modalEmpNombre;
-  var fecha=window._modalFecha;
-  guardarAsisUnica(empId,empNombre,estado,fecha);
+  if(estado==='medio tiempo'){toggleMedioTiempoPanel();return;}
+  guardarAsisUnica(window._modalEmpId,window._modalEmpNombre,estado,window._modalFecha);
   cerrarModalAsis();
 }
 
 function marcarAsisDirecto(personalId, nombre, estado){
   if(estado==='medio tiempo'){
-    // Abrir modal para elegir porcentaje
-    window._modalEmpId=personalId;
-    window._modalEmpNombre=nombre;
-    window._modalFecha=today();
+    window._modalEmpId=personalId;window._modalEmpNombre=nombre;window._modalFecha=today();
     document.getElementById('modal-titulo').textContent='Medio tiempo — '+nombre;
     document.getElementById('modal-fecha-lbl').textContent=fmtDate(today());
     document.getElementById('modal-estado-actual').innerHTML='';
-    var modal=document.getElementById('asis-modal');
-    modal.style.display='flex';
-    // Abrir directo al panel
+    document.getElementById('asis-modal').style.display='flex';
     setTimeout(function(){toggleMedioTiempoPanel();},50);
     return;
   }
@@ -2424,7 +2375,6 @@ function editarPrecio(id,val){
     <div style="display:flex;flex-direction:column;gap:8px">
       <button onclick="confirmarAsis('asistio')" style="background:#185FA5;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;font-family:inherit">✓ Asistio</button>
       <button onclick="toggleMedioTiempoPanel()" style="background:#854F0B;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;font-family:inherit">◑ Medio tiempo</button>
-      <!-- Panel porcentaje medio tiempo -->
       <div id="medio-tiempo-panel" style="display:none;background:#fff8f0;border:2px solid #854F0B;border-radius:10px;padding:12px">
         <div style="font-size:12px;color:#854F0B;font-weight:700;margin-bottom:8px">% del sueldo a pagar</div>
         <div style="display:flex;gap:6px;margin-bottom:8px">
