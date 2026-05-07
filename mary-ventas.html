@@ -1117,10 +1117,10 @@ function renderPOS(){
       html+='<div style="font-size:11px;color:#aaa">'+fmt(it.precioUnit)+' c/u</div></div>';
       html+='<div style="display:flex;align-items:center;gap:3px">';
       html+='<button onclick="posCambiarCant('+idx+',-1)" style="width:26px;height:26px;border-radius:5px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:16px;line-height:1">−</button>';
-      html+='<span style="min-width:22px;text-align:center;font-size:14px;font-weight:700">'+it.cantidad+'</span>';
+      html+='<input type="number" min="1" value="'+it.cantidad+'" onchange="posEditarCant('+idx+',this.value)" style="width:36px;text-align:center;font-size:14px;font-weight:700;border:1px solid #e0d5c5;border-radius:5px;padding:2px 0;font-family:inherit;background:#fff">';
       html+='<button onclick="posCambiarCant('+idx+',1)" style="width:26px;height:26px;border-radius:5px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:16px;line-height:1">+</button>';
       html+='</div>';
-      html+='<input type="number" min="0" step="0.50" value="'+it.subtotal.toFixed(2)+'" onchange="posEditarMonto('+idx+',this.value)" style="width:62px;text-align:right;font-size:13px;font-weight:700;color:#0F6E56;border:1px solid #e0d5c5;border-radius:6px;padding:3px 5px;font-family:inherit;background:#fff">';
+      html+='<div style="min-width:50px;text-align:right;font-size:13px;font-weight:700;color:#0F6E56">'+fmt(it.subtotal)+'</div>';
       html+='<button onclick="posQuitarItem('+idx+')" style="width:22px;height:22px;border-radius:5px;border:none;background:none;cursor:pointer;color:#ccc;font-size:14px">✕</button>';
       html+='</div>';
     });
@@ -1211,19 +1211,21 @@ function posAgregarProducto(prodId){
   }
 }
 
-function posEditarMonto(idx,val){
-  var monto=parseFloat(val);
-  if(isNaN(monto)||monto<0)return;
+function posEditarCant(idx,val){
+  var cant=parseInt(val);
+  if(isNaN(cant)||cant<1)cant=1;
   if(modoVenta==='mesas'&&mesaActiva){
     var m=mesas[mesaActiva];
     var items=Array.isArray(m.items)?m.items.slice():(m.items?Object.values(m.items):[]);
     var pend=items.filter(function(it){return !it.cobrado;});
     if(!pend[idx])return;
     var realIdx=items.indexOf(pend[idx]);
-    items[realIdx].subtotal=monto;
+    items[realIdx].cantidad=cant;
+    items[realIdx].subtotal=cant*items[realIdx].precioUnit;
     db.ref('mesas/'+mesaActiva).update({items:items,ultimoEditor:currentUser?currentUser.nombre:''});
   } else {
-    carritoItems[idx].subtotal=monto;
+    carritoItems[idx].cantidad=cant;
+    carritoItems[idx].subtotal=cant*carritoItems[idx].precioUnit;
     renderPOS();
   }
 }
