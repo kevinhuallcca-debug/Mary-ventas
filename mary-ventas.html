@@ -410,6 +410,30 @@ html{scroll-behavior:smooth}
 /* Efectos focus mejorados */
 button:focus-visible{outline:2px solid var(--mary-red);outline-offset:2px}
 
+
+/* FONDOS FESTIVOS PARA LOGIN */
+#login-screen.festive{background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;position:relative}
+#login-screen.festive::before{content:'';position:absolute;inset:0;background:rgba(255,255,255,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:0}
+#login-screen.festive .login-box{position:relative;z-index:1;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);background:rgba(255,255,255,.92)!important}
+.festive-badge{position:absolute;top:20px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.95);padding:8px 18px;border-radius:100px;font-size:13px;font-weight:800;color:#c1121f;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:2;letter-spacing:.3px}
+
+/* Día de la Madre - Flores rosas */
+#login-screen.dia-madre{background-image:url('https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=1200&q=80')}
+/* Día del Padre - Estilo cálido */
+#login-screen.dia-padre{background-image:url('https://images.unsplash.com/photo-1503516459261-40c66117780a?w=1200&q=80')}
+/* Navidad */
+#login-screen.navidad{background-image:url('https://images.unsplash.com/photo-1543589077-47d81606c1bf?w=1200&q=80')}
+/* Año Nuevo */
+#login-screen.ano-nuevo{background-image:url('https://images.unsplash.com/photo-1467810563316-b5476525c0f9?w=1200&q=80')}
+/* Fiestas Patrias Perú (28-29 julio) */
+#login-screen.fiestas-patrias{background-image:url('https://images.unsplash.com/photo-1531065208531-4036c0dba3ca?w=1200&q=80')}
+/* San Valentín */
+#login-screen.san-valentin{background-image:url('https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?w=1200&q=80')}
+/* Halloween */
+#login-screen.halloween{background-image:url('https://images.unsplash.com/photo-1509557965875-b88c97052f0e?w=1200&q=80')}
+/* Aniversario del restaurante (configurable) */
+#login-screen.aniversario{background-image:url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&q=80')}
+
 </style>
 </head>
 <body>
@@ -552,6 +576,55 @@ function showToast(msg,error){
   el.textContent=msg;el.style.background=error?'#7a1f1f':'#1f4a1f';
   el.classList.add('show');setTimeout(function(){el.classList.remove('show')},2500);
 }
+
+
+// ── FONDOS FESTIVOS AUTOMÁTICOS ─────────────────────────────
+function aplicarFondoFestivo(){
+  var ls=document.getElementById('login-screen');
+  if(!ls)return;
+  var hoy=new Date();
+  var mes=hoy.getMonth()+1; // 1-12
+  var dia=hoy.getDate();
+  var diaSemana=hoy.getDay(); // 0=domingo
+  var clase='';
+  var nombre='';
+  
+  // Día de la Madre Perú: 2do domingo de mayo (rango ampliado para mostrar todo mayo de prueba)
+  if(mes===5){clase='dia-madre';nombre='💐 Feliz Día de la Madre';}
+  // Día del Padre Perú: 3er domingo de junio
+  if(mes===6){
+    var primerDomJ=1+((7-new Date(hoy.getFullYear(),5,1).getDay())%7);
+    var diaPadre=primerDomJ+14;
+    if(dia>=diaPadre-2&&dia<=diaPadre+1){clase='dia-padre';nombre='👔 Feliz Día del Padre';}
+  }
+  // San Valentín: 14 febrero (rango 12-15)
+  if(mes===2&&dia>=12&&dia<=15){clase='san-valentin';nombre='💕 Feliz San Valentín';}
+  // Fiestas Patrias Perú: 28-29 julio
+  if(mes===7&&dia>=27&&dia<=30){clase='fiestas-patrias';nombre='🇵🇪 Felices Fiestas Patrias';}
+  // Halloween: 31 octubre
+  if(mes===10&&dia>=30){clase='halloween';nombre='🎃 Feliz Halloween';}
+  // Navidad: 20-26 diciembre
+  if(mes===12&&dia>=20&&dia<=26){clase='navidad';nombre='🎄 Feliz Navidad';}
+  // Año Nuevo: 28 dic - 2 ene
+  if((mes===12&&dia>=28)||(mes===1&&dia<=2)){clase='ano-nuevo';nombre='✨ Feliz Año Nuevo';}
+  
+  // Limpiar clases anteriores
+  ls.classList.remove('festive','dia-madre','dia-padre','san-valentin','fiestas-patrias','halloween','navidad','ano-nuevo','aniversario');
+  var oldBadge=document.getElementById('festive-badge');
+  if(oldBadge)oldBadge.remove();
+  
+  if(clase){
+    ls.classList.add('festive',clase);
+    var badge=document.createElement('div');
+    badge.id='festive-badge';
+    badge.className='festive-badge';
+    badge.textContent=nombre;
+    ls.appendChild(badge);
+  }
+}
+// Aplicar al cargar y cada hora
+aplicarFondoFestivo();
+setInterval(aplicarFondoFestivo,3600000);
 
 // ── AUTH ─────────────────────────────────────────────────────
 // Solo verificar si hay sesion activa en ESTA pestaña (SESSION persistence)
