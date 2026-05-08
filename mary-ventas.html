@@ -347,6 +347,7 @@ function loginAdmin(){
 
 function loginEmpleado(){
   var empId=document.getElementById('emp-select').value;
+  alert('Intentando login. empId='+empId+' personal.length='+personal.length);
   var pin=document.getElementById('emp-pin').value;
   if(!empId||!pin){document.getElementById('login-error').textContent='Selecciona tu nombre e ingresa tu PIN';return;}
   var emp=null;for(var i=0;i<personal.length;i++){if(personal[i].id===empId){emp=personal[i];break;}}
