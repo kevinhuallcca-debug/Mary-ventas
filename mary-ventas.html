@@ -353,14 +353,21 @@ function loginEmpleado(){
   if(!emp||!emp.pin){document.getElementById('login-error').textContent='Empleado no encontrado';return;}
   if(emp.pin.toString()!==pin.toString()){document.getElementById('login-error').textContent='PIN incorrecto';return;}
   currentUser={rol:'empleado',personalId:emp.id,nombre:emp.nombre};
-  document.getElementById('loader').style.display='none';
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('emp-app').style.display='block';
+  var loader=document.getElementById('loader');
+  var ls=document.getElementById('login-screen');
+  var ea=document.getElementById('emp-app');
+  if(loader){loader.style.display='none';loader.style.visibility='hidden';}
+  if(ls){ls.style.display='none';ls.style.visibility='hidden';}
+  ea.style.display='block';
+  ea.style.visibility='visible';
   document.getElementById('emp-badge').textContent=emp.nombre;
-  document.getElementById('emp-content').innerHTML='<div style="padding:2rem;text-align:center;color:#888">Cargando...</div>';
+  document.getElementById('emp-content').innerHTML='<div style="padding:2rem;text-align:center;color:#888">Cargando datos...</div>';
   startListeners();
-  // Si los datos ya estaban cargados, renderizar inmediatamente
-  if(personal.length>0){renderEmpView(emp.id);}
+  setTimeout(function(){
+    var empActual=personal.find(function(p){return p.id===emp.id;});
+    if(empActual){renderEmpView(empActual.id);}
+    else{document.getElementById('emp-content').innerHTML='<div style="padding:2rem;text-align:center;color:#c00">Error: no se encontró el empleado. Recarga la página.</div>';}
+  }, 1500);
 }
 
 function loginCajero(){
