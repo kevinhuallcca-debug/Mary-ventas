@@ -365,7 +365,7 @@ function loginEmpleado(){
   var intervalo=setInterval(function(){
     intentos++;
     var empActual=personal.find(function(p){return p.id===emp.id;});
-    if(empActual){clearInterval(intervalo);renderEmpView(empActual.id);}
+    if(empActual){clearInterval(intervalo);try{renderEmpView(empActual.id);}catch(e){document.getElementById('emp-content').innerHTML='<div style="padding:2rem;color:#c00;font-weight:bold">Error: '+e.message+'</div>';}}
     else if(intentos>10){clearInterval(intervalo);document.getElementById('emp-content').innerHTML='<div style="padding:2rem;text-align:center;color:#c00">No se pudo cargar. Recarga la página.</div>';}
   }, 500);
 }
