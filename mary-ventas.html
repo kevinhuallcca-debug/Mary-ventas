@@ -505,12 +505,14 @@ button:focus-visible{outline:2px solid var(--mary-red);outline-offset:2px}
       <button class="nb" onclick="showTab('historial')">Historial</button>
       <button class="nb" onclick="showTab('personal')">Personal</button>
       <button class="nb" onclick="showTab('productos')">Productos</button>
+      <button class="nb" onclick="showTab('recetas')">📖 Recetas</button>
     </nav>
   <div id="dashboard"></div>
   <div id="nueva" style="display:none"></div>
   <div id="historial" style="display:none"></div>
   <div id="personal" style="display:none"></div>
   <div id="productos" style="display:none"></div>
+  <div id="recetas" style="display:none"></div>
   <div id="gastos" style="display:none"></div>
   <div id="sesiones" style="display:none"></div>
 </div>
@@ -547,7 +549,7 @@ auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 var db = firebase.database();
 
 var currentUser = null; // { rol: 'admin'|'empleado', personalId, nombre }
-var ventas=[],productos=[],personal=[],asistencias=[],adelantos=[],pagos=[],cajaAperturas=[],gastos=[];
+var ventas=[],productos=[],personal=[],asistencias=[],adelantos=[],pagos=[],cajaAperturas=[],gastos=[],recetas=[];
 var activeTab='dashboard',filterTurno='todos',filterDate='';
 var selectedEmpId=null,selectedEmpSubTab='asistencia';
 var filterAsisDate='',filterMes='';
@@ -1074,6 +1076,35 @@ function renderEmpView(empId){
   });}
   html+='</div>';
 
+  // Recetas (solo lectura para empleado)
+  if(recetas&&recetas.length>0){
+    html+='<div class="card"><div class="sl">📖 Recetas del restaurante</div>';
+    html+='<div class="field"><input type="text" id="emp-rec-buscar" placeholder="🔍 Buscar receta..." oninput="filtrarRecetasEmp()" style="margin-bottom:10px"></div>';
+    html+='<div id="emp-rec-lista">';
+    var porCatE={};
+    recetas.forEach(function(r){var c=r.categoria||'Otros';if(!porCatE[c])porCatE[c]=[];porCatE[c].push(r);});
+    Object.keys(porCatE).sort().forEach(function(cat){
+      html+='<div style="margin:14px 0 6px;font-size:11px;font-weight:800;color:#c1121f;letter-spacing:.8px">'+cat.toUpperCase()+'</div>';
+      porCatE[cat].forEach(function(r){
+        html+='<div class="emp-receta-item" data-nombre="'+(r.nombre||'').toLowerCase()+'" style="background:#fafbff;border:1px solid #e8eaf0;border-radius:14px;padding:12px;margin-bottom:8px">';
+        html+='<div style="font-size:15px;font-weight:800;color:#0f172a">'+r.nombre+'</div>';
+        if(r.rinde){html+='<div style="font-size:11px;color:#64748b;margin-top:2px">Rinde: '+r.rinde+'</div>';}
+        if(r.ingredientes){
+          html+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e8eaf0"><div style="font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:4px">INGREDIENTES</div>';
+          html+='<div style="font-size:13px;color:#0f172a;white-space:pre-line;line-height:1.5">'+r.ingredientes+'</div></div>';
+        }
+        if(r.pasos){
+          html+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e8eaf0"><div style="font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:4px">PREPARACIÓN</div>';
+          html+='<div style="font-size:13px;color:#0f172a;white-space:pre-line;line-height:1.5">'+r.pasos+'</div></div>';
+        }
+        if(r.notas){
+          html+='<div style="margin-top:8px;padding:8px 10px;background:#fef3c7;border-radius:8px;font-size:12px;color:#92400e"><b>💡 Tip:</b> '+r.notas+'</div>';
+        }
+        html+='</div>';
+      });
+    });
+    html+='</div></div>';
+  }
 
   html+='</div>';
   document.getElementById('emp-content').innerHTML=html;
@@ -1151,6 +1182,11 @@ function startListeners(){
     gastos=[];snap.forEach(function(c){gastos.push(Object.assign({id:c.key},c.val()))});
     render();
   });
+  db.ref('recetas').on('value',function(snap){
+    recetas=[];snap.forEach(function(c){recetas.push(Object.assign({id:c.key},c.val()))});
+    recetas.sort(function(a,b){return(a.nombre||'').localeCompare(b.nombre||'')});
+    render();refreshEmpView();
+  });
 }
 
 // Cargar personal para el login de empleados (sin autenticacion)
@@ -1179,7 +1215,7 @@ function showTab(name){
     if(dt){b.classList.toggle('on',dt===name);}
     else{b.classList.toggle('on',b.getAttribute('onclick')&&b.getAttribute('onclick').indexOf("'"+name+"'")>-1);}
   });
-  ['dashboard','nueva','historial','personal','productos','gastos','sesiones'].forEach(function(t){
+  ['dashboard','nueva','historial','personal','productos','recetas','gastos','sesiones'].forEach(function(t){
     document.getElementById(t).style.display=t===name?'block':'none';
   });
   render();
@@ -1192,6 +1228,7 @@ function render(){
   else if(activeTab==='personal'){if(selectedEmpId)renderEmpDetail();else renderPersonalList();}
   else if(activeTab==='gastos')renderGastos();
   else if(activeTab==='productos')renderProductos();
+  else if(activeTab==='recetas')renderRecetas();
   else if(activeTab==='sesiones')renderSesiones();
 }
 
@@ -2707,6 +2744,120 @@ function guardarGasto(){
 function eliminarGasto(id){
   if(!confirm('¿Eliminar este gasto?'))return;
   db.ref('gastos/'+id).remove().then(function(){showToast('Gasto eliminado');});
+}
+
+function renderRecetas(){
+  var cont=document.getElementById('recetas');
+  var editId=window._editandoReceta||null;
+  var editR=editId?recetas.find(function(r){return r.id===editId;}):null;
+  var html='';
+  
+  // Formulario crear/editar
+  html+='<div class="card"><div class="sl">'+(editR?'✏️ Editar receta':'➕ Nueva receta')+'</div>';
+  html+='<div class="field"><label>Nombre del plato/bebida</label><input type="text" id="rec-nom" placeholder="Ej: Chicha morada" value="'+(editR?(editR.nombre||'').replace(/"/g,'&quot;'):'')+'"></div>';
+  html+='<div class="field"><label>Categoría</label><select id="rec-cat">';
+  ['Bebidas','Refrescos','Salsas','Desayunos','Almuerzos','Cenas','Postres','Otros'].forEach(function(c){
+    html+='<option value="'+c+'"'+(editR&&editR.categoria===c?' selected':'')+'>'+c+'</option>';
+  });
+  html+='</select></div>';
+  html+='<div class="field"><label>Rinde para</label><input type="text" id="rec-rinde" placeholder="Ej: 5 vasos / 1 litro" value="'+(editR?(editR.rinde||'').replace(/"/g,'&quot;'):'')+'"></div>';
+  html+='<div class="field"><label>Ingredientes y cantidades (uno por línea)</label><textarea id="rec-ingr" rows="6" style="width:100%;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 12px;font-size:13px;font-family:Nunito,sans-serif;font-weight:600;background:#fff;resize:vertical" placeholder="Ej:&#10;1 kg de maíz morado&#10;2 manzanas&#10;3 clavos de olor&#10;Azúcar al gusto">'+(editR?(editR.ingredientes||''):'')+'</textarea></div>';
+  html+='<div class="field"><label>Pasos de preparación (opcional)</label><textarea id="rec-pasos" rows="5" style="width:100%;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 12px;font-size:13px;font-family:Nunito,sans-serif;font-weight:600;background:#fff;resize:vertical" placeholder="Ej:&#10;1. Hervir el maíz con las especias por 30 min&#10;2. Colar y dejar enfriar&#10;3. Agregar jugo de limón y azúcar">'+(editR?(editR.pasos||''):'')+'</textarea></div>';
+  html+='<div class="field"><label>Notas o tips (opcional)</label><input type="text" id="rec-notas" placeholder="Ej: Servir bien fría con hielo" value="'+(editR?(editR.notas||'').replace(/"/g,'&quot;'):'')+'"></div>';
+  if(editR){
+    html+='<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="guardarReceta()">Guardar cambios</button><button class="btn" style="flex:1;background:#666!important;box-shadow:none!important" onclick="cancelarEdicionReceta()">Cancelar</button></div>';
+  } else {
+    html+='<button class="btn" onclick="guardarReceta()">Guardar receta</button>';
+  }
+  html+='</div>';
+  
+  // Listado
+  html+='<div class="card"><div class="sl">📖 Recetas guardadas ('+recetas.length+')</div>';
+  if(recetas.length===0){
+    html+='<div class="empty">Aún no hay recetas. Agrega la primera arriba.</div>';
+  } else {
+    // Buscador
+    html+='<div class="field"><input type="text" id="rec-buscar" placeholder="🔍 Buscar receta..." oninput="filtrarRecetas()" style="margin-bottom:10px"></div>';
+    html+='<div id="rec-lista">';
+    var porCat={};
+    recetas.forEach(function(r){var c=r.categoria||'Otros';if(!porCat[c])porCat[c]=[];porCat[c].push(r);});
+    Object.keys(porCat).sort().forEach(function(cat){
+      html+='<div style="margin:14px 0 6px;font-size:11px;font-weight:800;color:#c1121f;letter-spacing:.8px">'+cat.toUpperCase()+' ('+porCat[cat].length+')</div>';
+      porCat[cat].forEach(function(r){
+        html+='<div class="receta-item" data-nombre="'+(r.nombre||'').toLowerCase()+'" style="background:#fafbff;border:1px solid #e8eaf0;border-radius:14px;padding:12px;margin-bottom:8px">';
+        html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">';
+        html+='<div style="flex:1"><div style="font-size:15px;font-weight:800;color:#0f172a">'+r.nombre+'</div>';
+        if(r.rinde){html+='<div style="font-size:11px;color:#64748b;margin-top:2px">Rinde: '+r.rinde+'</div>';}
+        html+='</div>';
+        html+='<div style="display:flex;gap:6px"><button class="btnd" style="background:#dbeafe!important;color:#1d4ed8!important" onclick="editarReceta(\''+r.id+'\')">Editar</button>';
+        html+='<button class="btnd" onclick="eliminarReceta(\''+r.id+'\')">Eliminar</button></div>';
+        html+='</div>';
+        if(r.ingredientes){
+          html+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e8eaf0"><div style="font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:4px">INGREDIENTES</div>';
+          html+='<div style="font-size:13px;color:#0f172a;white-space:pre-line;line-height:1.5">'+r.ingredientes+'</div></div>';
+        }
+        if(r.pasos){
+          html+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e8eaf0"><div style="font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:4px">PREPARACIÓN</div>';
+          html+='<div style="font-size:13px;color:#0f172a;white-space:pre-line;line-height:1.5">'+r.pasos+'</div></div>';
+        }
+        if(r.notas){
+          html+='<div style="margin-top:8px;padding:8px 10px;background:#fef3c7;border-radius:8px;font-size:12px;color:#92400e"><b>💡 Tip:</b> '+r.notas+'</div>';
+        }
+        html+='</div>';
+      });
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  cont.innerHTML=html;
+}
+
+function filtrarRecetasEmp(){
+  var q=(document.getElementById('emp-rec-buscar').value||'').toLowerCase();
+  document.querySelectorAll('.emp-receta-item').forEach(function(el){
+    el.style.display=el.getAttribute('data-nombre').indexOf(q)>=0?'block':'none';
+  });
+}
+function filtrarRecetas(){
+  var q=(document.getElementById('rec-buscar').value||'').toLowerCase();
+  document.querySelectorAll('.receta-item').forEach(function(el){
+    el.style.display=el.getAttribute('data-nombre').indexOf(q)>=0?'block':'none';
+  });
+}
+
+function guardarReceta(){
+  var nom=document.getElementById('rec-nom').value.trim();
+  var cat=document.getElementById('rec-cat').value;
+  var rinde=document.getElementById('rec-rinde').value.trim();
+  var ingr=document.getElementById('rec-ingr').value.trim();
+  var pasos=document.getElementById('rec-pasos').value.trim();
+  var notas=document.getElementById('rec-notas').value.trim();
+  if(!nom){showToast('El nombre es obligatorio',true);return;}
+  if(!ingr){showToast('Agrega al menos los ingredientes',true);return;}
+  var data={nombre:nom,categoria:cat,rinde:rinde,ingredientes:ingr,pasos:pasos,notas:notas,timestamp:Date.now()};
+  if(window._editandoReceta){
+    db.ref('recetas/'+window._editandoReceta).update(data).then(function(){
+      window._editandoReceta=null;showToast('Receta actualizada');
+    });
+  } else {
+    db.ref('recetas').push(data).then(function(){showToast('Receta guardada');});
+  }
+}
+
+function editarReceta(id){
+  window._editandoReceta=id;
+  renderRecetas();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function cancelarEdicionReceta(){
+  window._editandoReceta=null;
+  renderRecetas();
+}
+
+function eliminarReceta(id){
+  if(!confirm('¿Eliminar esta receta? Esta acción no se puede deshacer.'))return;
+  db.ref('recetas/'+id).remove().then(function(){showToast('Receta eliminada');});
 }
 
 function renderProductos(){
