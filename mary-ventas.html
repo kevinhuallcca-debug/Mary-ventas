@@ -359,7 +359,7 @@ function loginEmpleado(){
   var ea=document.getElementById('emp-app');
   ea.style.cssText='display:block!important';
   document.getElementById('emp-badge').textContent=emp.nombre;
-  document.getElementById('emp-content').innerHTML='<div style="padding:2rem;text-align:center;color:#888">Cargando...</div>';
+  document.getElementById('emp-content').innerHTML='<div style="padding:2rem;text-align:center;color:red;font-size:24px;font-weight:bold;background:yellow">CARGANDO EMPLEADO...</div>';
   startListeners();
   var intentos=0;
   var intervalo=setInterval(function(){
