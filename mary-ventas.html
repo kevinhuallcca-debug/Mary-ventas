@@ -353,9 +353,14 @@ function loginEmpleado(){
   if(!emp||!emp.pin){document.getElementById('login-error').textContent='Empleado no encontrado';return;}
   if(emp.pin.toString()!==pin.toString()){document.getElementById('login-error').textContent='PIN incorrecto';return;}
   currentUser={rol:'empleado',personalId:emp.id,nombre:emp.nombre};
+  document.getElementById('loader').style.display='none';
   document.getElementById('login-screen').style.display='none';
+  document.getElementById('emp-app').style.display='block';
+  document.getElementById('emp-badge').textContent=emp.nombre;
+  document.getElementById('emp-content').innerHTML='<div style="padding:2rem;text-align:center;color:#888">Cargando...</div>';
   startListeners();
-  showEmpApp(emp);
+  // Si los datos ya estaban cargados, renderizar inmediatamente
+  if(personal.length>0){renderEmpView(emp.id);}
 }
 
 function loginCajero(){
