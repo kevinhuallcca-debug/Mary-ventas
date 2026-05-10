@@ -1790,7 +1790,14 @@ function renderHistorial(){
     var wStart=new Date(); wStart.setDate(wStart.getDate()-wStart.getDay()-w*7);
     var wEnd=new Date(wStart); wEnd.setDate(wStart.getDate()+6);
     var ws=wStart.getFullYear()+'-'+(wStart.getMonth()+1<10?'0':'')+(wStart.getMonth()+1)+'-'+(wStart.getDate()<10?'0':'')+wStart.getDate(); var we=wEnd.getFullYear()+'-'+(wEnd.getMonth()+1<10?'0':'')+(wEnd.getMonth()+1)+'-'+(wEnd.getDate()<10?'0':'')+wEnd.getDate();
-    labelsS.push('S '+(wStart.getDate())+'/'+(wStart.getMonth()+1));
+    var mnamesS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    var lblS;
+    if(wStart.getMonth()===wEnd.getMonth()){
+      lblS=wStart.getDate()+'-'+wEnd.getDate()+' '+mnamesS[wStart.getMonth()];
+    } else {
+      lblS=wStart.getDate()+' '+mnamesS[wStart.getMonth()]+' - '+wEnd.getDate()+' '+mnamesS[wEnd.getMonth()];
+    }
+    labelsS.push(lblS);
     semanas8.push(ventas.filter(function(v){return v.fecha>=ws&&v.fecha<=we;}).reduce(function(a,v){return a+(v.cantidad||1);},0));
   }
   // Mensual: ultimos 6 meses
