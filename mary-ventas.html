@@ -1453,9 +1453,7 @@ function renderPOS(){
   html+='<button onclick="setPosMode(\'rapido\')" style="padding:7px 10px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(modoVenta==='rapido'?'#8b0000':'#fff')+';color:'+(modoVenta==='rapido'?'#fff':'#8b0000')+'">⚡ Rápido</button>';
   html+='<button onclick="setPosMode(\'mesas\')" style="padding:7px 10px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(modoVenta==='mesas'?'#8b0000':'#fff')+';color:'+(modoVenta==='mesas'?'#fff':'#8b0000')+'">🪑 Mesas</button>';
   html+='</div>';
-  // Turno automático según hora actual (mostrar como info, no editable)
-  var turnoIcon=turnoAuto==='desayuno'?'🌅':turnoAuto==='almuerzo'?'☀️':'🌙';
-  html+='<div style="background:#fef2f3;color:#8b0000;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #fde0e3;display:flex;align-items:center;gap:6px" title="Turno actual según hora">'+turnoIcon+' '+turnoAuto.charAt(0).toUpperCase()+turnoAuto.slice(1)+'</div>';
+  // Turno automático: asignado según hora del producto, no se muestra
   html+='<input type="text" id="pos-busqueda" placeholder="Buscar..." value="'+posBusqueda+'" oninput="posBuscar(this.value)" style="flex:1;min-width:80px;border:1px solid #e0d5c5;border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit">';
   html+='</div>';
 
