@@ -47,7 +47,7 @@ body{font-family:'Nunito',sans-serif;background:#f0f2f5;color:#1a1a2e;min-height
 .lerror{color:#e63946;font-size:12px;text-align:center;margin-top:8px;min-height:18px}
 
 /* APP */
-#app{display:none;max-width:960px;margin:0 auto;padding:0 0 80px}
+#app{display:none;max-width:1280px;margin:0 auto;padding:0 16px 80px}
 .top-bar{display:flex;align-items:center;justify-content:space-between;background:#fff;padding:10px 1rem;border-bottom:1px solid #f0f2f5}
 .top-bar-logo img{height:36px;object-fit:contain}
 .top-bar-right{display:flex;align-items:center;gap:10px}
@@ -693,7 +693,7 @@ function loginEmpleado(){
   if(emp.pin.toString()!==pin.toString()){document.getElementById('login-error').textContent='PIN incorrecto';return;}
   currentUser={rol:'empleado',personalId:emp.id,nombre:emp.nombre};
   // Reemplazar todo el body con la vista del empleado para evitar conflictos CSS
-  document.body.innerHTML='<div id="emp-app" style="display:block;background:#f0f2f5;min-height:100vh"><div style="display:flex;align-items:center;justify-content:space-between;background:#fff;padding:10px 1rem;border-bottom:1px solid #f0f2f5"><span style="background:#8b0000;color:#fff;padding:6px 14px;border-radius:8px;font-weight:700" id="emp-badge">'+emp.nombre+'</span><button onclick="location.reload()" style="background:#666;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer">Salir</button></div><div id="emp-content" style="padding:1rem;max-width:960px;margin:0 auto"></div></div>';
+  document.body.innerHTML='<div id="emp-app" style="display:block;background:#f0f2f5;min-height:100vh"><div style="display:flex;align-items:center;justify-content:space-between;background:#fff;padding:10px 1rem;border-bottom:1px solid #f0f2f5"><span style="background:#8b0000;color:#fff;padding:6px 14px;border-radius:8px;font-weight:700" id="emp-badge">'+emp.nombre+'</span><button onclick="location.reload()" style="background:#666;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer">Salir</button></div><div id="emp-content" style="padding:1rem;max-width:1280px;margin:0 auto"></div></div>';
   document.getElementById('emp-content').innerHTML='<div style="padding:2rem;text-align:center;color:#888">Cargando...</div>';
   // Re-attach listeners para datos en vivo
   if(!listenersStarted){startListeners();}
