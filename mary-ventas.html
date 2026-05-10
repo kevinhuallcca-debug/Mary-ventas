@@ -2758,7 +2758,7 @@ function renderRecetas(){
   html+='<div class="card"><div class="sl">'+(editR?'✏️ Editar receta':'➕ Nueva receta')+'</div>';
   html+='<div class="field"><label>Nombre del plato/bebida</label><input type="text" id="rec-nom" placeholder="Ej: Chicha morada" value="'+(editR?(editR.nombre||'').replace(/"/g,'&quot;'):'')+'"></div>';
   html+='<div class="field"><label>Categoría</label><select id="rec-cat">';
-  ['Bebidas','Refrescos','Salsas','Desayunos','Almuerzos','Cenas','Postres','Otros'].forEach(function(c){
+  ['Platos de fondo','Sopas','Bebidas','Salsas','Postres','Otros'].forEach(function(c){
     html+='<option value="'+c+'"'+(editR&&editR.categoria===c?' selected':'')+'>'+c+'</option>';
   });
   html+='</select></div>';
