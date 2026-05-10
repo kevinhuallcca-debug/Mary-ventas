@@ -47,7 +47,7 @@ body{font-family:'Nunito',sans-serif;background:#f5f1e8 url('data:image/jpeg;bas
 .lerror{color:#e63946;font-size:12px;text-align:center;margin-top:8px;min-height:18px}
 
 /* APP */
-#app{display:none;max-width:1280px;margin:0 auto;padding:0 16px 80px;background:rgba(245,241,232,.65);backdrop-filter:blur(2px);min-height:100vh}
+#app{display:none;max-width:1280px;margin:24px auto;padding:0 16px 80px;background:rgba(255,253,248,.92);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);min-height:calc(100vh - 48px);border-radius:28px;box-shadow:0 20px 60px rgba(139,0,0,.12),0 8px 24px rgba(15,23,42,.08);overflow:hidden;border:1px solid rgba(255,255,255,.6)}
 .top-bar{display:flex;align-items:center;justify-content:space-between;background:#fff;padding:10px 1rem;border-bottom:1px solid #f0f2f5}
 .top-bar-logo img{height:36px;object-fit:contain}
 .top-bar-right{display:flex;align-items:center;gap:10px}
@@ -141,7 +141,7 @@ body{font-family:'Nunito',sans-serif;background:#f5f1e8 url('data:image/jpeg;bas
 ::-webkit-scrollbar-thumb{background:#d0d4e0;border-radius:4px}
 @media(max-width:700px){
   body{background:#f5f1e8!important}
-  #app{background:transparent!important;backdrop-filter:none!important}
+  #app{background:transparent!important;backdrop-filter:none!important;border-radius:0!important;box-shadow:none!important;margin:0 auto!important;border:none!important;min-height:100vh!important}
   .metrics{grid-template-columns:repeat(2,1fr)}
   .g2{grid-template-columns:1fr}
   .card{margin:.6rem}
@@ -697,7 +697,7 @@ function loginEmpleado(){
   // Reemplazar todo el body con la vista del empleado para evitar conflictos CSS
   // Aplicar el mismo fondo decorativo que tiene el body principal
   document.body.style.cssText=window.getComputedStyle(document.body).cssText;
-  document.body.innerHTML='<div id="emp-app" style="display:block;min-height:100vh"><div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.85);backdrop-filter:saturate(180%) blur(20px);padding:10px 1rem;border-bottom:1px solid #f0f2f5"><span style="background:#8b0000;color:#fff;padding:6px 14px;border-radius:8px;font-weight:700" id="emp-badge">'+emp.nombre+'</span><button onclick="location.reload()" style="background:#666;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer">Salir</button></div><div id="emp-content" style="padding:1rem;max-width:1280px;margin:0 auto;background:rgba(245,241,232,.65);backdrop-filter:blur(2px);min-height:calc(100vh - 60px)"></div></div>';
+  document.body.innerHTML='<div id="emp-app" style="display:block;min-height:100vh"><div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.85);backdrop-filter:saturate(180%) blur(20px);padding:10px 1rem;border-bottom:1px solid #f0f2f5"><span style="background:#8b0000;color:#fff;padding:6px 14px;border-radius:8px;font-weight:700" id="emp-badge">'+emp.nombre+'</span><button onclick="location.reload()" style="background:#666;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer">Salir</button></div><div id="emp-content" style="padding:1rem;max-width:1280px;margin:20px auto;background:rgba(255,253,248,.92);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);min-height:calc(100vh - 100px);border-radius:28px;box-shadow:0 20px 60px rgba(139,0,0,.12),0 8px 24px rgba(15,23,42,.08);border:1px solid rgba(255,255,255,.6)"></div></div>';
   document.getElementById('emp-content').innerHTML='<div style="padding:2rem;text-align:center;color:#888">Cargando...</div>';
   // Re-attach listeners para datos en vivo
   if(!listenersStarted){startListeners();}
