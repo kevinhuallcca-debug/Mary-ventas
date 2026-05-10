@@ -224,7 +224,9 @@ body{font-family:'Nunito',sans-serif;background:#f5f1e8 url('data:image/jpeg;bas
   background:rgba(255,255,255,.85)!important;
   backdrop-filter:saturate(180%) blur(20px);
   -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-radius:28px 28px 0 0;
 }
+@media(max-width:700px){.top-bar{border-radius:0!important}}
 
 .user-badge{
   background:var(--text-primary)!important;
@@ -1364,6 +1366,13 @@ var mesas={};
 var mesaActiva=null;
 var posCategoria='todas';
 var posBusqueda='';
+function turnoParaProducto(prodTurno){
+  // Si el producto tiene turno fijo (desayuno/almuerzo/cena), usar ese
+  if(prodTurno==='desayuno'||prodTurno==='almuerzo'||prodTurno==='cena')return prodTurno;
+  // Si es bebidas/otros/otro o sin turno, usar el turno actual según hora
+  return getTurnoAuto();
+}
+
 function getTurnoAuto(){
   var h=new Date().getHours();
   var m=new Date().getMinutes();
@@ -1444,14 +1453,9 @@ function renderPOS(){
   html+='<button onclick="setPosMode(\'rapido\')" style="padding:7px 10px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(modoVenta==='rapido'?'#8b0000':'#fff')+';color:'+(modoVenta==='rapido'?'#fff':'#8b0000')+'">⚡ Rápido</button>';
   html+='<button onclick="setPosMode(\'mesas\')" style="padding:7px 10px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:'+(modoVenta==='mesas'?'#8b0000':'#fff')+';color:'+(modoVenta==='mesas'?'#fff':'#8b0000')+'">🪑 Mesas</button>';
   html+='</div>';
-  html+='<select id="pos-turno" onchange="posTurnoChange()" style="border:1px solid #e0d5c5;border-radius:8px;padding:6px 8px;font-size:12px;font-family:inherit">';
-  html+='<option value="desayuno"'+(turnoAuto==='desayuno'?' selected':'')+'>🌅 Desayuno</option>';
-  html+='<option value="almuerzo"'+(turnoAuto==='almuerzo'?' selected':'')+'>☀️ Almuerzo</option>';
-  html+='<option value="cena"'+(turnoAuto==='cena'?' selected':'')+'>🌙 Cena</option>';
-  html+='<option value="otros"'+(turnoAuto==='otros'?' selected':'')+'>🍴 Otros</option>';
-  html+='<option value="bebidas"'+(turnoAuto==='bebidas'?' selected':'')+'>🥤 Bebidas</option>';
-  html+='<option value="otro">📦 Otro</option>';
-  html+='</select>';
+  // Turno automático según hora actual (mostrar como info, no editable)
+  var turnoIcon=turnoAuto==='desayuno'?'🌅':turnoAuto==='almuerzo'?'☀️':'🌙';
+  html+='<div style="background:#fef2f3;color:#8b0000;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #fde0e3;display:flex;align-items:center;gap:6px" title="Turno actual según hora">'+turnoIcon+' '+turnoAuto.charAt(0).toUpperCase()+turnoAuto.slice(1)+'</div>';
   html+='<input type="text" id="pos-busqueda" placeholder="Buscar..." value="'+posBusqueda+'" oninput="posBuscar(this.value)" style="flex:1;min-width:80px;border:1px solid #e0d5c5;border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit">';
   html+='</div>';
 
@@ -1674,7 +1678,9 @@ function posRegistrar(){
     var total=pend.reduce(function(a,it){return a+it.subtotal;},0);
     var obs='Mesa '+(mesaActiva.replace('mesa_',''));
     Promise.all(pend.map(function(it){
-      return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts});
+      var prod=productos.find(function(p){return p.id===it.prodId;});
+      var turnoItem=turnoParaProducto(prod?prod.turno:null);
+      return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turnoItem,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts});
     })).then(function(){
       return db.ref('mesas/'+mesaActiva).remove();
     }).then(function(){
@@ -1685,7 +1691,9 @@ function posRegistrar(){
     if(carritoItems.length===0){showToast('Agrega productos',true);return;}
     var total2=carritoItems.reduce(function(a,it){return a+it.subtotal;},0);
     Promise.all(carritoItems.map(function(it){
-      return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turno,fecha:fecha,hora:hora,obs:'',pago:posPago,timestamp:ts});
+      var prod=productos.find(function(p){return p.id===it.prodId;});
+      var turnoItem=turnoParaProducto(prod?prod.turno:null);
+      return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turnoItem,fecha:fecha,hora:hora,obs:'',pago:posPago,timestamp:ts});
     })).then(function(){
       showToast('✓ Venta registrada — '+fmt(total2));
       carritoItems=[];renderPOS();
@@ -1715,7 +1723,9 @@ function posCobrarParcial(){
   var selItems=indices.map(function(i){return pend[i];});
   var totalParcial=selItems.reduce(function(a,it){return a+it.subtotal;},0);
   Promise.all(selItems.map(function(it){
-    return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turno,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts});
+    var prod=productos.find(function(p){return p.id===it.prodId;});
+    var turnoItem=turnoParaProducto(prod?prod.turno:null);
+    return db.ref('ventas').push({producto:it.nombre,prodId:it.prodId,cantidad:it.cantidad,precioUnit:it.precioUnit,total:it.subtotal,turno:turnoItem,fecha:fecha,hora:hora,obs:obs,pago:pago,timestamp:ts});
   })).then(function(){
     // Marcar como cobrados
     var newItems=mitems.map(function(it){
