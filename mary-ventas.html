@@ -695,7 +695,9 @@ function loginEmpleado(){
   if(emp.pin.toString()!==pin.toString()){document.getElementById('login-error').textContent='PIN incorrecto';return;}
   currentUser={rol:'empleado',personalId:emp.id,nombre:emp.nombre};
   // Reemplazar todo el body con la vista del empleado para evitar conflictos CSS
-  document.body.innerHTML='<div id="emp-app" style="display:block;background:#f0f2f5;min-height:100vh"><div style="display:flex;align-items:center;justify-content:space-between;background:#fff;padding:10px 1rem;border-bottom:1px solid #f0f2f5"><span style="background:#8b0000;color:#fff;padding:6px 14px;border-radius:8px;font-weight:700" id="emp-badge">'+emp.nombre+'</span><button onclick="location.reload()" style="background:#666;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer">Salir</button></div><div id="emp-content" style="padding:1rem;max-width:1280px;margin:0 auto"></div></div>';
+  // Aplicar el mismo fondo decorativo que tiene el body principal
+  document.body.style.cssText=window.getComputedStyle(document.body).cssText;
+  document.body.innerHTML='<div id="emp-app" style="display:block;min-height:100vh"><div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.85);backdrop-filter:saturate(180%) blur(20px);padding:10px 1rem;border-bottom:1px solid #f0f2f5"><span style="background:#8b0000;color:#fff;padding:6px 14px;border-radius:8px;font-weight:700" id="emp-badge">'+emp.nombre+'</span><button onclick="location.reload()" style="background:#666;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer">Salir</button></div><div id="emp-content" style="padding:1rem;max-width:1280px;margin:0 auto;background:rgba(245,241,232,.65);backdrop-filter:blur(2px);min-height:calc(100vh - 60px)"></div></div>';
   document.getElementById('emp-content').innerHTML='<div style="padding:2rem;text-align:center;color:#888">Cargando...</div>';
   // Re-attach listeners para datos en vivo
   if(!listenersStarted){startListeners();}
