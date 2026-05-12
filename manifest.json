@@ -5,7 +5,7 @@
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
-  "background_color": "#1a1a2e",
+  "background_color": "#f5f1e8",
   "theme_color": "#8b0000",
   "orientation": "portrait-primary",
   "icons": [
@@ -28,6 +28,25 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["business", "productivity"],
+  "screenshots": [
+    {
+      "src": "screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Mary Sistema de Gestión"
+    },
+    {
+      "src": "screenshot-narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mary en móvil"
+    }
+  ],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "lang": "es"
 }
