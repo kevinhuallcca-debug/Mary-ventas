@@ -438,6 +438,29 @@ button:focus-visible{outline:2px solid var(--mary-red);outline-offset:2px}
 /* Aniversario del restaurante (configurable) */
 #login-screen.aniversario{background-image:url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&q=80')}
 
+
+/* Filtros modernos tipo pills */
+.frow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.fb{
+  padding:8px 16px!important;
+  border-radius:100px!important;
+  border:1.5px solid var(--border)!important;
+  background:var(--bg-card)!important;
+  color:var(--text-secondary)!important;
+  font-size:13px!important;
+  font-weight:700!important;
+  cursor:pointer!important;
+  transition:all .2s ease!important;
+  font-family:inherit!important;
+}
+.fb:hover{border-color:var(--mary-red)!important;color:var(--mary-red)!important}
+.fb.on{
+  background:var(--mary-red)!important;
+  color:#fff!important;
+  border-color:var(--mary-red)!important;
+  box-shadow:0 4px 12px rgba(193,18,31,.25)!important;
+}
+
 </style>
 </head>
 <body>
