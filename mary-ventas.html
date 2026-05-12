@@ -1968,7 +1968,13 @@ function switchReporte(tipo){
               if(!r)return c.dataset.label+': '+c.parsed.y+' unidades';
               var vs=ventas.filter(function(v){return v.fecha>=r.inicio&&v.fecha<=r.fin;});
               var prods={};
-              vs.forEach(function(v){var n=v.producto;if(!prods[n])prods[n]=0;prods[n]+=(v.cantidad||1);});
+              vs.forEach(function(v){
+                var n=v.producto;
+                // Agrupar menús completos en el tooltip
+                if(/^(Desayuno|Almuerzo|Cena)\s+completo$/i.test(n))n='Menú completo';
+                if(!prods[n])prods[n]=0;
+                prods[n]+=(v.cantidad||1);
+              });
               var arr=Object.keys(prods).map(function(k){return{n:k,c:prods[k]};}).sort(function(a,b){return b.c-a.c;});
               var lines=['Total: '+c.parsed.y+' unidades',''];
               arr.slice(0,8).forEach(function(p){lines.push('• '+p.n+': '+p.c);});
