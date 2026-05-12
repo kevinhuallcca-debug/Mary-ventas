@@ -2591,16 +2591,28 @@ function toggleMedioTiempoPanel(){
   var visible=panel.style.display!=='none';
   panel.style.display=visible?'none':'block';
   if(!visible){
-    // Calcular 50% del sueldo del empleado como default
     var emp=personal.find(function(p){return p.id===window._modalEmpId;});
     var sueldo=emp?(emp.sueldoDia||emp.sueldo||0):0;
     var inp=document.getElementById('mt-monto');
-    if(inp){inp.value=sueldo>0?(sueldo*0.5).toFixed(2):'';inp.focus();}
+    if(inp){
+      // Recordar el último valor que ingresó el usuario (por empleado)
+      var ultimoMonto=null;
+      try{ultimoMonto=localStorage.getItem('mt-monto-'+window._modalEmpId);}catch(e){}
+      if(ultimoMonto&&!isNaN(parseFloat(ultimoMonto))){
+        inp.value=parseFloat(ultimoMonto).toFixed(2);
+      } else {
+        inp.value=sueldo>0?(sueldo*0.5).toFixed(2):'';
+      }
+      inp.focus();
+      inp.select();
+    }
   }
 }
 function confirmarMedioTiempo(){
   var inp=document.getElementById('mt-monto');
   var monto=parseFloat(inp?inp.value:0)||0;
+  // Guardar el monto para recordarlo la próxima vez
+  try{localStorage.setItem('mt-monto-'+window._modalEmpId,monto);}catch(e){}
   var emp=personal.find(function(p){return p.id===window._modalEmpId;});
   var sueldo=emp?(emp.sueldoDia||emp.sueldo||0):0;
   // Calcular porcentaje equivalente para el historial
@@ -3076,7 +3088,7 @@ function editarPrecio(id,val){
       <button onclick="toggleMedioTiempoPanel()" style="background:#854F0B;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;font-family:inherit">◑ Medio tiempo</button>
       <div id="medio-tiempo-panel" style="display:none;background:#fff8f0;border:2px solid #854F0B;border-radius:10px;padding:12px">
         <div style="font-size:12px;color:#854F0B;font-weight:700;margin-bottom:6px">Monto a pagar (S/)</div>
-        <div style="font-size:11px;color:#aaa;margin-bottom:8px">Default: 50% del sueldo del día</div>
+        <div style="font-size:11px;color:#aaa;margin-bottom:8px">Recuerda el último monto que ingresaste</div>
         <input type="number" id="mt-monto" min="0" step="0.5" placeholder="0.00" style="width:100%;border:1.5px solid #854F0B;border-radius:8px;padding:10px 12px;font-size:20px;font-family:inherit;text-align:center;margin-bottom:10px">
         <button onclick="confirmarMedioTiempo()" style="width:100%;background:#854F0B;color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Confirmar medio tiempo</button>
       </div>
