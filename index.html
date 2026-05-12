@@ -1277,6 +1277,7 @@ setTimeout(function(){
 
 // ── RENDER ADMIN ──────────────────────────────────────────────
 function showTab(name){
+  quitarFAB();
   activeTab=name;selectedEmpId=null;
   document.querySelectorAll('.nb').forEach(function(b){
     var dt=b.getAttribute('data-tab');
@@ -1603,6 +1604,7 @@ function renderPOS(){
   html+='</div>'; // cierra layout wrapper
 
   root.innerHTML=html;
+  renderFABCarrito();
   }catch(e){
     var r=document.getElementById('pos-root');
     if(r)r.innerHTML='<div style="padding:20px;color:red">ERROR: '+e.message+'</div>';
@@ -1614,6 +1616,55 @@ function renderPOS(){
 var posPago='efectivo';
 
 function posSetVista(v){window.posVista=v;renderPOS();}
+
+function renderFABCarrito(){
+  // Eliminar FAB existente
+  var oldFab=document.getElementById('pos-fab');
+  if(oldFab)oldFab.remove();
+  
+  // Solo mostrar en móvil
+  if(window.innerWidth>700)return;
+  
+  var items;
+  var total;
+  if(modoVenta==='mesa'&&mesaActiva){
+    var mesa=mesas.find(function(m){return m.id===mesaActiva;});
+    if(!mesa)return;
+    items=Array.isArray(mesa.items)?mesa.items:(mesa.items?Object.values(mesa.items):[]);
+    items=items.filter(function(it){return !it.cobrado;});
+    total=items.reduce(function(a,it){return a+it.subtotal;},0);
+  } else {
+    items=carritoItems;
+    total=items.reduce(function(a,it){return a+it.subtotal;},0);
+  }
+  
+  if(!items||items.length===0)return;
+  
+  var vista=window.posVista||'productos';
+  if(vista==='pedido')return; // Ya está viendo el pedido
+  
+  var cant=items.reduce(function(a,it){return a+it.cantidad;},0);
+  
+  var fab=document.createElement('div');
+  fab.id='pos-fab';
+  fab.style.cssText='position:fixed;bottom:20px;left:16px;right:16px;background:linear-gradient(135deg,#e63946 0%,#8b0000 100%);color:#fff;padding:14px 20px;border-radius:18px;box-shadow:0 8px 24px rgba(139,0,0,.35);cursor:pointer;z-index:500;display:flex;align-items:center;justify-content:space-between;animation:fabIn .3s ease;font-family:Nunito,sans-serif';
+  fab.onclick=function(){posSetVista('pedido');};
+  fab.innerHTML='<div style="display:flex;align-items:center;gap:10px"><div style="background:rgba(255,255,255,.25);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px">🛒</div><div><div style="font-size:11px;opacity:.9;font-weight:600">'+cant+' producto'+(cant>1?'s':'')+'</div><div style="font-size:16px;font-weight:800">S/ '+total.toFixed(2)+'</div></div></div><div style="font-size:14px;font-weight:700;background:rgba(255,255,255,.2);padding:8px 14px;border-radius:100px">Ver pedido →</div>';
+  
+  // Agregar estilo de animación si no existe
+  if(!document.getElementById('fab-style')){
+    var st=document.createElement('style');
+    st.id='fab-style';
+    st.textContent='@keyframes fabIn{from{transform:translateY(100px);opacity:0}to{transform:translateY(0);opacity:1}}';
+    document.head.appendChild(st);
+  }
+  
+  document.body.appendChild(fab);
+}
+
+// Eliminar FAB al cambiar de pestaña
+function quitarFAB(){var f=document.getElementById('pos-fab');if(f)f.remove();}
+
 function setPosMode(m){modoVenta=m;mesaActiva=null;carritoItems=[];window.posVista='productos';renderPOS();}
 function posSetCat(c){posCategoria=c;renderPOS();}
 function posBuscar(v){
@@ -1659,13 +1710,12 @@ function posAgregarProducto(prodId){
     else{items.push({prodId:prod.id,nombre:prod.nombre,cantidad:1,precioUnit:prod.precio,subtotal:prod.precio});}
     var turnoEl=document.getElementById('pos-turno');
     db.ref('mesas/'+mesaActiva).update({items:items,turno:turnoEl?turnoEl.value:getTurnoAuto(),ultimoEditor:currentUser?currentUser.nombre:''});
-    if(window.innerWidth<=700){window.posVista='pedido';}
+    if(window.innerWidth<=700){showToast('+ '+prod.nombre,false);}
   } else {
     var existe2=carritoItems.findIndex(function(it){return it.prodId===prod.id&&it.precioUnit===prod.precio;});
     if(existe2>=0){carritoItems[existe2].cantidad++;carritoItems[existe2].subtotal=carritoItems[existe2].cantidad*carritoItems[existe2].precioUnit;}
     else{carritoItems.push({prodId:prod.id,nombre:prod.nombre,cantidad:1,precioUnit:prod.precio,subtotal:prod.precio});}
-    // En móvil, cambiar automáticamente al pedido
-    if(window.innerWidth<=700){window.posVista='pedido';}
+    if(window.innerWidth<=700){showToast('+ '+prod.nombre,false);}
     renderPOS();
   }
 }
