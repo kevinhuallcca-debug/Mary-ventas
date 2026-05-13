@@ -1104,7 +1104,7 @@ function renderEmpView(empId){
     for(var i=0;i<firstDay;i++){html+='<div></div>';}
     for(var d=1;d<=daysInMonth;d++){
       var ds=calYear+'-'+(calMonth+1<10?'0':'')+(calMonth+1)+'-'+(d<10?'0':'')+d;
-      var antesDelPago=ultimoPago&&ds<=ultimoPago;
+      var antesDelPago=!window._verHistoricoAsis&&ultimoPago&&ds<=ultimoPago;
       var futura=ds>today();
       var regsDs=todaAsis.filter(function(a){return a.fecha===ds;});
       var ultDs=regsDs.length?regsDs[regsDs.length-1]:null;
@@ -2320,6 +2320,7 @@ function renderEmpDetail(){
   document.getElementById('personal').innerHTML=html;
 }
 function subTab(t){selectedEmpSubTab=t;render();}
+function toggleHistoricoAsis(){window._verHistoricoAsis=!window._verHistoricoAsis;render();}
 function volverPersonal(){selectedEmpId=null;render();}
 
 function renderSubAsistencia(emp,mes){
@@ -2349,7 +2350,16 @@ function renderSubAsistencia(emp,mes){
 
   var html='<div class="card"><div class="sl">Asistencia</div>';
   if(ultimoPago){
-    html+='<div style="background:#f0faf5;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:13px;color:#0F6E56">Periodo desde: <strong>'+fmtDate(ultimoPago)+'</strong> hasta hoy</div>';
+    var verHistorico=window._verHistoricoAsis||false;
+    html+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">';
+    if(verHistorico){
+      html+='<div style="flex:1;min-width:200px;background:#fef3c7;border-radius:8px;padding:8px 12px;font-size:13px;color:#92400e">📜 Viendo histórico completo (todos los días incluyendo pagados)</div>';
+      html+='<button onclick="toggleHistoricoAsis()" style="background:#8b0000;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Volver al periodo actual</button>';
+    } else {
+      html+='<div style="flex:1;min-width:200px;background:#f0faf5;border-radius:8px;padding:8px 12px;font-size:13px;color:#0F6E56">Periodo desde: <strong>'+fmtDate(ultimoPago)+'</strong> hasta hoy</div>';
+      html+='<button onclick="toggleHistoricoAsis()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📜 Ver histórico completo</button>';
+    }
+    html+='</div>';
   } else {
     html+='<div style="background:#f9f5ef;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:13px;color:#888">Mostrando todas las asistencias registradas</div>';
   }
@@ -2377,7 +2387,7 @@ function renderSubAsistencia(emp,mes){
     for(var i=0;i<firstDay;i++){html+='<div></div>';}
     for(var d=1;d<=daysInMonth;d++){
       var ds=calYear+'-'+(calMonth+1<10?'0':'')+(calMonth+1)+'-'+(d<10?'0':'')+d;
-      var antesDelPago=ultimoPago&&ds<=ultimoPago;
+      var antesDelPago=!window._verHistoricoAsis&&ultimoPago&&ds<=ultimoPago;
       var antesDelInicio=ds<fechaInicio;
       var regsDs=todaAsis.filter(function(a){return a.fecha===ds;});
       var ultDs=regsDs.length?regsDs[regsDs.length-1]:null;
