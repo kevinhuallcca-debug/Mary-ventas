@@ -1,18 +1,13 @@
 {
-  "name": "Mary — Sistema de Gestión",
+  "name": "Mary — Jr. Ramón Castilla",
   "short_name": "Mary",
   "description": "Sistema de ventas y gestión del restaurante Mary",
-  "start_url": "/Mary-ventas/",
-  "scope": "/Mary-ventas/",
-  "id": "/Mary-ventas/",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
-  "display_override": [
-    "standalone",
-    "minimal-ui"
-  ],
   "background_color": "#f5f1e8",
   "theme_color": "#8b0000",
-  "orientation": "any",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "icon-192.png",
@@ -25,12 +20,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
     },
     {
       "src": "icon-512.png",
@@ -59,7 +48,5 @@
     "business",
     "productivity"
   ],
-  "lang": "es",
-  "dir": "ltr",
-  "prefer_related_applications": false
+  "lang": "es"
 }
