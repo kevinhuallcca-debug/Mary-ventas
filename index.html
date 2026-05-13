@@ -2931,8 +2931,7 @@ function exportarPDF(){
   win.document.write('<h2>Gastos</h2><table><tr><th>Hora</th><th>Descripcion</th><th></th><th></th><th>Monto</th><th>Pago</th></tr>'+grow+'</table>');
   win.document.write('<div class="total" style="color:#A32D2D">Total gastos: '+fmt(totalG)+'</div>');
   win.document.write('<div class="saldo">Saldo en caja: '+fmt(totalV-totalG)+'</div>');
-  win.document.write('
-</body></html>');
+  win.document.write('</body></html>');
   win.document.close();
   win.print();
 }
