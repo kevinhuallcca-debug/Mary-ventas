@@ -570,6 +570,7 @@ button:focus-visible{outline:2px solid var(--mary-red);outline-offset:2px}
       <button class="nb" onclick="showTab('personal')">Personal</button>
       <button class="nb" onclick="showTab('productos')">Productos</button>
       <button class="nb" onclick="showTab('recetas')">📖 Recetas</button>
+      <button class="nb" onclick="showTab('pensionistas')">🧾 Pensionistas</button>
     </nav>
   <div id="dashboard"></div>
   <div id="nueva" style="display:none"></div>
@@ -577,6 +578,7 @@ button:focus-visible{outline:2px solid var(--mary-red);outline-offset:2px}
   <div id="personal" style="display:none"></div>
   <div id="productos" style="display:none"></div>
   <div id="recetas" style="display:none"></div>
+  <div id="pensionistas" style="display:none"></div>
   <div id="gastos" style="display:none"></div>
   <div id="sesiones" style="display:none"></div>
 </div>
@@ -613,7 +615,7 @@ auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 var db = firebase.database();
 
 var currentUser = null; // { rol: 'admin'|'empleado', personalId, nombre }
-var ventas=[],productos=[],personal=[],asistencias=[],adelantos=[],pagos=[],cajaAperturas=[],gastos=[],recetas=[];
+var ventas=[],productos=[],personal=[],asistencias=[],adelantos=[],pagos=[],cajaAperturas=[],gastos=[],recetas=[],pensionistas=[];
 var activeTab='dashboard',filterTurno='todos',filterDate='';
 var selectedEmpId=null,selectedEmpSubTab='asistencia';
 var filterAsisDate='',filterMes='';
@@ -1002,6 +1004,7 @@ function showAdminApp(){
     '<button class="nb" data-tab="personal" onclick="showTab(\'personal\')">Personal</button>',
     '<button class="nb" data-tab="productos" onclick="showTab(\'productos\')">Productos</button>',
     '<button class="nb" data-tab="recetas" onclick="showTab(\'recetas\')">📖 Recetas</button>',
+    '<button class="nb" data-tab="pensionistas" onclick="showTab(\'pensionistas\')">🧾 Pensionistas</button>',
     '<button class="nb" data-tab="gastos" onclick="showTab(\'gastos\')">Gastos</button>',
     '<button class="nb" data-tab="sesiones" onclick="showTab(\'sesiones\')">🔒 Sesiones</button>'].join('');
   render();
@@ -1143,6 +1146,24 @@ function renderEmpView(empId){
   });}
   html+='</div>';
 
+  // Pensionistas (todos los empleados pueden registrar consumos)
+  if(pensionistas&&pensionistas.length>0){
+    html+='<div class="card"><div class="sl">🧾 Pensionistas - Registrar consumo</div>';
+    html+='<div style="font-size:12px;color:#888;margin-bottom:10px">Toca un pensionista para agregar consumo a su cuenta</div>';
+    pensionistas.forEach(function(p){
+      var consumos=p.consumos?Object.values(p.consumos):[];
+      var pendientes=consumos.filter(function(c){return !c.pagado;});
+      var totalPend=pendientes.reduce(function(a,c){return a+(c.subtotal||0);},0);
+      html+='<div onclick="empSelectPensionista(\''+p.id+'\')" style="background:#fafbff;border:1px solid #e8eaf0;border-radius:14px;padding:12px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px">';
+      html+='<div style="flex:1"><div style="font-size:15px;font-weight:800;color:#0f172a">'+p.nombre+'</div>';
+      html+='<div style="font-size:11px;color:#94a3b8">'+pendientes.length+' pendiente'+(pendientes.length!==1?'s':'')+'</div></div>';
+      if(totalPend>0){html+='<div style="text-align:right"><div style="font-size:10px;color:#64748b">Debe</div><div style="font-size:16px;font-weight:800;color:#8b0000">S/ '+totalPend.toFixed(2)+'</div></div>';}
+      else{html+='<div style="background:#dcfce7;color:#0F6E56;padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700">✓ Sin deuda</div>';}
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+
   // Recetas (solo las visibles para este empleado)
   var recetasVisibles=recetas.filter(function(r){return r.visiblePara&&r.visiblePara.indexOf(empId)>=0;});
   if(recetasVisibles.length>0){
@@ -1255,6 +1276,11 @@ function startListeners(){
     recetas.sort(function(a,b){return(a.nombre||'').localeCompare(b.nombre||'')});
     render();refreshEmpView();
   });
+  db.ref('pensionistas').on('value',function(snap){
+    pensionistas=[];snap.forEach(function(c){pensionistas.push(Object.assign({id:c.key},c.val()))});
+    pensionistas.sort(function(a,b){return(a.nombre||'').localeCompare(b.nombre||'')});
+    render();
+  });
 }
 
 // Cargar personal para el login de empleados (sin autenticacion)
@@ -1284,7 +1310,7 @@ function showTab(name){
     if(dt){b.classList.toggle('on',dt===name);}
     else{b.classList.toggle('on',b.getAttribute('onclick')&&b.getAttribute('onclick').indexOf("'"+name+"'")>-1);}
   });
-  ['dashboard','nueva','historial','personal','productos','recetas','gastos','sesiones'].forEach(function(t){
+  ['dashboard','nueva','historial','personal','productos','recetas','pensionistas','gastos','sesiones'].forEach(function(t){
     document.getElementById(t).style.display=t===name?'block':'none';
   });
   render();
@@ -1298,6 +1324,7 @@ function render(){
   else if(activeTab==='gastos')renderGastos();
   else if(activeTab==='productos')renderProductos();
   else if(activeTab==='recetas')renderRecetas();
+  else if(activeTab==='pensionistas')renderPensionistas();
   else if(activeTab==='sesiones')renderSesiones();
 }
 
@@ -2468,8 +2495,70 @@ function renderSubAdelantos(emp,mes){
     html+='<button class="btnd" onclick="eliminarAdelanto(\''+a.id+'\')">x</button></div></div>';
   });}
   html+='</div>';
+  
+  // HISTÓRICO DE ADELANTOS (incluye pagados) con filtro por mes
+  var verHistAd=window._verHistoricoAdelantos||false;
+  html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px"><div class="sl" style="margin:0">📜 Histórico de adelantos</div>';
+  if(verHistAd){
+    html+='<button onclick="toggleHistoricoAdelantos()" style="background:#8b0000;color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">Ocultar</button></div>';
+    
+    // Obtener todos los adelantos del empleado (incluyendo liquidados)
+    var todosAd=adelantos.filter(function(a){return a.personalId===emp.id;});
+    
+    // Generar lista de meses con adelantos
+    var mesesConAd={};
+    todosAd.forEach(function(a){var m=a.fecha.slice(0,7);mesesConAd[m]=true;});
+    var mesesArr=Object.keys(mesesConAd).sort().reverse();
+    
+    var mesFiltro=window._mesHistAdelantos||'todos';
+    
+    // Selector de mes
+    html+='<div class="field" style="margin-bottom:10px"><label>Filtrar por mes</label><select onchange="setMesHistAdelantos(this.value)" style="max-width:220px">';
+    html+='<option value="todos"'+(mesFiltro==='todos'?' selected':'')+'>Todos los meses</option>';
+    var mnamesA=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    mesesArr.forEach(function(m){
+      var yr=m.slice(0,4),mn=parseInt(m.slice(5,7))-1;
+      html+='<option value="'+m+'"'+(mesFiltro===m?' selected':'')+'>'+mnamesA[mn]+' '+yr+'</option>';
+    });
+    html+='</select></div>';
+    
+    var adFiltrados=mesFiltro==='todos'?todosAd:todosAd.filter(function(a){return a.fecha.slice(0,7)===mesFiltro;});
+    adFiltrados.sort(function(a,b){return(b.fecha||'').localeCompare(a.fecha||'');});
+    
+    // Resumen
+    var adFiltEf=adFiltrados.filter(function(a){return a.tipo==='efectivo'}).reduce(function(a,x){return a+x.monto},0);
+    var adFiltPr=adFiltrados.filter(function(a){return a.tipo==='producto'}).reduce(function(a,x){return a+x.monto},0);
+    var adFiltPag=adFiltrados.filter(function(a){return a.liquidado}).reduce(function(a,x){return a+x.monto},0);
+    var adFiltPend=adFiltrados.filter(function(a){return !a.liquidado}).reduce(function(a,x){return a+x.monto},0);
+    
+    html+='<div class="resumen-box" style="margin-bottom:10px">';
+    html+='<div class="resumen-row"><span>Efectivo</span><span style="color:#185FA5">'+fmt(adFiltEf)+'</span></div>';
+    html+='<div class="resumen-row"><span>Productos</span><span style="color:#993556">'+fmt(adFiltPr)+'</span></div>';
+    html+='<div class="resumen-row"><span style="color:#0F6E56">Ya pagados</span><span style="color:#0F6E56">'+fmt(adFiltPag)+'</span></div>';
+    html+='<div class="resumen-row"><span style="color:#854F0B">Pendientes</span><span style="color:#854F0B">'+fmt(adFiltPend)+'</span></div>';
+    html+='<div class="resumen-row total"><span>Total</span><span style="color:#8b0000">'+fmt(adFiltEf+adFiltPr)+'</span></div></div>';
+    
+    if(adFiltrados.length===0){html+='<div class="empty">Sin adelantos en este periodo</div>';}
+    else{
+      adFiltrados.forEach(function(a){
+        var tag=a.tipo==='efectivo'?'<span class="tag-ef">Efectivo</span>':'<span class="tag-pr">Producto</span>';
+        var estadoBadge=a.liquidado?'<span style="background:#dcfce7;color:#0F6E56;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700;margin-left:6px">✓ Pagado</span>':'<span style="background:#fef3c7;color:#854F0B;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700;margin-left:6px">Pendiente</span>';
+        html+='<div class="row" style="opacity:'+(a.liquidado?'0.75':'1')+'"><div>'+tag+estadoBadge+'<div class="rn" style="margin-top:3px">'+(a.descripcion||'Adelanto')+'</div>';
+        html+='<div class="rm">'+fmtDate(a.fecha)+(a.nota?' · '+a.nota:'')+'</div></div>';
+        html+='<div style="font-size:14px;font-weight:600;color:#854F0B">'+fmt(a.monto)+'</div></div>';
+      });
+    }
+  } else {
+    html+='<button onclick="toggleHistoricoAdelantos()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">Mostrar</button></div>';
+    html+='<div style="font-size:12px;color:#888;padding:8px 0">Toca "Mostrar" para ver todos los adelantos (incluyendo los ya pagados) filtrados por mes</div>';
+  }
+  html+='</div>';
+  
   return html;
 }
+
+function toggleHistoricoAdelantos(){window._verHistoricoAdelantos=!window._verHistoricoAdelantos;render();}
+function setMesHistAdelantos(m){window._mesHistAdelantos=m;render();}
 
 function renderSubPagos(emp,mes){
   var paEmp=pagos.filter(function(a){return a.personalId===emp.id&&a.fecha.slice(0,7)===mes});
@@ -3005,6 +3094,203 @@ function eliminarGasto(id){
   db.ref('gastos/'+id).remove().then(function(){showToast('Gasto eliminado');});
 }
 
+function renderPensionistas(){
+  var cont=document.getElementById('pensionistas');
+  var seleccionado=window._pensionistaSel||null;
+  var pensSel=seleccionado?pensionistas.find(function(p){return p.id===seleccionado;}):null;
+  var html='';
+  
+  // Si hay uno seleccionado, mostrar detalle
+  if(pensSel){
+    var consumos=pensSel.consumos?Object.values(pensSel.consumos):[];
+    consumos.sort(function(a,b){return(b.fecha||'').localeCompare(a.fecha||'');});
+    var pendientes=consumos.filter(function(c){return !c.pagado;});
+    var pagados=consumos.filter(function(c){return c.pagado;});
+    var totalPend=pendientes.reduce(function(a,c){return a+(c.subtotal||0);},0);
+    
+    html+='<div class="card">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><button onclick="selectPensionista(null)" style="background:#f1f5f9;color:#475569;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">← Volver</button>';
+    html+='<button onclick="eliminarPensionista(\''+pensSel.id+'\')" class="btnd">Eliminar pensionista</button></div>';
+    html+='<div style="text-align:center;padding:14px 0"><div style="font-size:22px;font-weight:800;color:#0f172a">'+pensSel.nombre+'</div>';
+    if(pensSel.telefono)html+='<div style="font-size:13px;color:#64748b;margin-top:4px">📞 '+pensSel.telefono+'</div>';
+    if(pensSel.nota)html+='<div style="font-size:12px;color:#94a3b8;margin-top:4px">'+pensSel.nota+'</div>';
+    html+='</div>';
+    
+    // Resumen
+    html+='<div style="background:linear-gradient(135deg,#fef2f3 0%,#fff 100%);border-radius:14px;padding:16px;margin-bottom:14px;border-left:4px solid #8b0000">';
+    html+='<div style="font-size:11px;color:#64748b;letter-spacing:.5px;font-weight:700">DEUDA PENDIENTE</div>';
+    html+='<div style="font-size:28px;font-weight:800;color:#8b0000;margin-top:4px">S/ '+totalPend.toFixed(2)+'</div>';
+    html+='<div style="font-size:12px;color:#64748b;margin-top:4px">'+pendientes.length+' consumo'+(pendientes.length!==1?'s':'')+' sin pagar</div></div>';
+    
+    if(pendientes.length>0){
+      html+='<button class="btn" onclick="marcarPagadoPensionista(\''+pensSel.id+'\')" style="margin-bottom:14px">💰 Marcar todo como pagado (S/ '+totalPend.toFixed(2)+')</button>';
+    }
+    html+='</div>';
+    
+    // Agregar consumo nuevo
+    html+='<div class="card"><div class="sl">➕ Registrar consumo</div>';
+    html+='<div class="g2"><div class="field"><label>Producto</label><select id="pens-prod" onchange="calcPensTotal()">';
+    productos.forEach(function(p){html+='<option value="'+p.id+'" data-precio="'+p.precio+'" data-nombre="'+p.nombre+'">'+p.nombre+' - S/ '+p.precio.toFixed(2)+'</option>';});
+    html+='</select></div>';
+    html+='<div class="field"><label>Cantidad</label><input type="number" id="pens-cant" value="1" min="1" oninput="calcPensTotal()"></div></div>';
+    html+='<div class="field"><label>Total</label><input type="text" id="pens-total" readonly class="total-field" value="S/ 0.00"></div>';
+    html+='<div class="field"><label>Nota (opcional)</label><input type="text" id="pens-nota" placeholder="Ej: solo sopa, sin arroz..."></div>';
+    html+='<button class="btn" onclick="agregarConsumoPensionista(\''+pensSel.id+'\')">Registrar consumo</button></div>';
+    
+    // Lista de consumos pendientes
+    html+='<div class="card"><div class="sl">Consumos pendientes ('+pendientes.length+')</div>';
+    if(pendientes.length===0){html+='<div class="empty">Sin consumos pendientes</div>';}
+    else{
+      pendientes.forEach(function(c){
+        html+='<div class="row"><div><div class="rn">'+(c.cantidad||1)+'x '+c.producto+'</div>';
+        html+='<div class="rm">'+fmtDate(c.fecha)+(c.nota?' · '+c.nota:'')+(c.registradoPor?' · por '+c.registradoPor:'')+'</div></div>';
+        html+='<div style="display:flex;align-items:center;gap:6px"><div style="font-size:14px;font-weight:700;color:#8b0000">S/ '+(c.subtotal||0).toFixed(2)+'</div>';
+        html+='<button class="btnd" onclick="eliminarConsumoPensionista(\''+pensSel.id+'\',\''+c.id+'\')">x</button></div></div>';
+      });
+    }
+    html+='</div>';
+    
+    // Histórico de pagos
+    if(pagados.length>0){
+      var verHistP=window._verHistPensionista||false;
+      html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div class="sl" style="margin:0">📜 Histórico de consumos pagados</div>';
+      html+='<button onclick="toggleHistPensionista()" style="background:'+(verHistP?'#8b0000':'#f1f5f9')+';color:'+(verHistP?'#fff':'#475569')+';border:none;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">'+(verHistP?'Ocultar':'Mostrar')+'</button></div>';
+      if(verHistP){
+        // Agrupar por fecha de pago
+        var porFechaPago={};
+        pagados.forEach(function(c){var fp=c.fechaPago||c.fecha;if(!porFechaPago[fp])porFechaPago[fp]=[];porFechaPago[fp].push(c);});
+        Object.keys(porFechaPago).sort().reverse().forEach(function(fp){
+          var lote=porFechaPago[fp];
+          var totalLote=lote.reduce(function(a,c){return a+(c.subtotal||0);},0);
+          html+='<div style="background:#f0faf5;border-radius:10px;padding:12px;margin-bottom:8px">';
+          html+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:13px;font-weight:700;color:#0F6E56">✓ Pagado el '+fmtDate(fp)+'</div><div style="font-size:14px;font-weight:800;color:#0F6E56">S/ '+totalLote.toFixed(2)+'</div></div>';
+          lote.forEach(function(c){
+            html+='<div style="font-size:12px;color:#475569;padding:3px 0">• '+(c.cantidad||1)+'x '+c.producto+' (S/ '+(c.subtotal||0).toFixed(2)+') - '+fmtDate(c.fecha)+'</div>';
+          });
+          html+='</div>';
+        });
+      }
+      html+='</div>';
+    }
+    
+    cont.innerHTML=html;
+    return;
+  }
+  
+  // Vista de lista de pensionistas
+  html+='<div class="card"><div class="sl">➕ Nuevo pensionista</div>';
+  html+='<div class="g2"><div class="field"><label>Nombre completo</label><input type="text" id="pens-nom" placeholder="Ej: Juan Pérez"></div>';
+  html+='<div class="field"><label>Teléfono (opcional)</label><input type="text" id="pens-tel" placeholder="999 999 999"></div></div>';
+  html+='<div class="field"><label>Nota (opcional)</label><input type="text" id="pens-nota-new" placeholder="Ej: come almuerzo todos los días, paga semanal"></div>';
+  html+='<button class="btn" onclick="crearPensionista()">Crear pensionista</button></div>';
+  
+  html+='<div class="card"><div class="sl">🧾 Pensionistas ('+pensionistas.length+')</div>';
+  if(pensionistas.length===0){
+    html+='<div class="empty">Aún no hay pensionistas. Crea el primero arriba.</div>';
+  } else {
+    pensionistas.forEach(function(p){
+      var consumos=p.consumos?Object.values(p.consumos):[];
+      var pendientes=consumos.filter(function(c){return !c.pagado;});
+      var totalPend=pendientes.reduce(function(a,c){return a+(c.subtotal||0);},0);
+      html+='<div onclick="selectPensionista(\''+p.id+'\')" style="background:#fafbff;border:1px solid #e8eaf0;border-radius:14px;padding:14px;margin-bottom:8px;cursor:pointer;transition:all .15s ease" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 4px 12px rgba(15,23,42,.08)\'" onmouseout="this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">';
+      html+='<div style="flex:1"><div style="font-size:15px;font-weight:800;color:#0f172a">'+p.nombre+'</div>';
+      if(p.telefono)html+='<div style="font-size:11px;color:#64748b;margin-top:2px">📞 '+p.telefono+'</div>';
+      html+='<div style="font-size:11px;color:#94a3b8;margin-top:2px">'+pendientes.length+' consumo'+(pendientes.length!==1?'s':'')+' pendiente'+(pendientes.length!==1?'s':'')+'</div></div>';
+      if(totalPend>0){
+        html+='<div style="text-align:right"><div style="font-size:11px;color:#64748b">Debe</div><div style="font-size:18px;font-weight:800;color:#8b0000">S/ '+totalPend.toFixed(2)+'</div></div>';
+      } else {
+        html+='<div style="background:#dcfce7;color:#0F6E56;padding:4px 12px;border-radius:100px;font-size:11px;font-weight:700">✓ Sin deuda</div>';
+      }
+      html+='</div></div>';
+    });
+  }
+  html+='</div>';
+  cont.innerHTML=html;
+}
+
+function selectPensionista(id){window._pensionistaSel=id;render();window.scrollTo({top:0,behavior:'smooth'});}
+function toggleHistPensionista(){window._verHistPensionista=!window._verHistPensionista;render();}
+
+function crearPensionista(){
+  var nom=document.getElementById('pens-nom').value.trim();
+  var tel=document.getElementById('pens-tel').value.trim();
+  var nota=document.getElementById('pens-nota-new').value.trim();
+  if(!nom){showToast('Ingresa el nombre',true);return;}
+  db.ref('pensionistas').push({nombre:nom,telefono:tel,nota:nota,timestamp:Date.now()}).then(function(){
+    showToast('Pensionista creado');
+  });
+}
+
+function eliminarPensionista(id){
+  if(!confirm('¿Eliminar este pensionista? Se borrarán todos sus consumos.'))return;
+  db.ref('pensionistas/'+id).remove().then(function(){
+    window._pensionistaSel=null;
+    showToast('Pensionista eliminado');
+  });
+}
+
+function calcPensTotal(){
+  var sel=document.getElementById('pens-prod');
+  var cant=parseInt(document.getElementById('pens-cant').value)||1;
+  if(!sel)return;
+  var opt=sel.options[sel.selectedIndex];
+  var precio=parseFloat(opt.getAttribute('data-precio'))||0;
+  document.getElementById('pens-total').value='S/ '+(precio*cant).toFixed(2);
+}
+
+function agregarConsumoPensionista(pensId){
+  var sel=document.getElementById('pens-prod');
+  var cant=parseInt(document.getElementById('pens-cant').value)||1;
+  var nota=document.getElementById('pens-nota').value.trim();
+  if(!sel||cant<1){showToast('Datos incompletos',true);return;}
+  var opt=sel.options[sel.selectedIndex];
+  var producto=opt.getAttribute('data-nombre');
+  var precio=parseFloat(opt.getAttribute('data-precio'))||0;
+  var subtotal=precio*cant;
+  var consumo={
+    producto:producto,
+    cantidad:cant,
+    precioUnit:precio,
+    subtotal:subtotal,
+    nota:nota,
+    fecha:today(),
+    hora:nowTime(),
+    pagado:false,
+    registradoPor:currentUser?currentUser.nombre:'',
+    timestamp:Date.now()
+  };
+  var ref=db.ref('pensionistas/'+pensId+'/consumos').push();
+  consumo.id=ref.key;
+  ref.set(consumo).then(function(){showToast('Consumo registrado');});
+}
+
+function eliminarConsumoPensionista(pensId,conId){
+  if(!confirm('¿Eliminar este consumo?'))return;
+  db.ref('pensionistas/'+pensId+'/consumos/'+conId).remove().then(function(){
+    showToast('Consumo eliminado');
+  });
+}
+
+function marcarPagadoPensionista(pensId){
+  var pens=pensionistas.find(function(p){return p.id===pensId;});
+  if(!pens)return;
+  var consumos=pens.consumos||{};
+  var pendientes=Object.keys(consumos).filter(function(k){return !consumos[k].pagado;});
+  if(pendientes.length===0){showToast('No hay consumos pendientes',true);return;}
+  var total=pendientes.reduce(function(a,k){return a+(consumos[k].subtotal||0);},0);
+  if(!confirm('¿Marcar como pagado S/ '+total.toFixed(2)+' ('+pendientes.length+' consumos)?'))return;
+  var fechaPago=today();
+  var updates={};
+  pendientes.forEach(function(k){
+    updates['pensionistas/'+pensId+'/consumos/'+k+'/pagado']=true;
+    updates['pensionistas/'+pensId+'/consumos/'+k+'/fechaPago']=fechaPago;
+  });
+  db.ref().update(updates).then(function(){
+    showToast('Pago registrado: S/ '+total.toFixed(2));
+  });
+}
+
 function renderRecetas(){
   var cont=document.getElementById('recetas');
   var editId=window._editandoReceta||null;
@@ -3088,6 +3374,85 @@ function renderRecetas(){
   cont.innerHTML=html;
 }
 
+
+function empSelectPensionista(pensId){
+  var pens=pensionistas.find(function(p){return p.id===pensId;});
+  if(!pens)return;
+  
+  var modal=document.getElementById('emp-pens-modal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='emp-pens-modal';
+    modal.style.cssText='display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:flex-end;justify-content:center';
+    modal.onclick=function(e){if(e.target===modal)modal.style.display='none';};
+    document.body.appendChild(modal);
+  }
+  
+  var consumos=pens.consumos?Object.values(pens.consumos):[];
+  var pendientes=consumos.filter(function(c){return !c.pagado;});
+  pendientes.sort(function(a,b){return(b.fecha||'').localeCompare(a.fecha||'');});
+  var totalPend=pendientes.reduce(function(a,c){return a+(c.subtotal||0);},0);
+  
+  var html='<div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;padding:24px 20px 32px">';
+  html+='<div style="width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:-8px auto 16px"></div>';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:18px;font-weight:800">'+pens.nombre+'</div>';
+  html+='<button onclick="document.getElementById(\'emp-pens-modal\').style.display=\'none\'" style="background:#f1f5f9;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;color:#64748b">✕</button></div>';
+  
+  html+='<div style="background:linear-gradient(135deg,#fef2f3 0%,#fff 100%);border-radius:12px;padding:14px;margin-bottom:14px;border-left:4px solid #8b0000"><div style="font-size:11px;color:#64748b;letter-spacing:.5px;font-weight:700">DEUDA ACTUAL</div><div style="font-size:24px;font-weight:800;color:#8b0000">S/ '+totalPend.toFixed(2)+'</div></div>';
+  
+  html+='<div class="sl" style="margin-bottom:10px">➕ Registrar consumo</div>';
+  html+='<div class="field"><label>Producto</label><select id="emp-pens-prod" onchange="empCalcPensTotal()">';
+  productos.forEach(function(p){html+='<option value="'+p.id+'" data-precio="'+p.precio+'" data-nombre="'+p.nombre+'">'+p.nombre+' - S/ '+p.precio.toFixed(2)+'</option>';});
+  html+='</select></div>';
+  html+='<div class="g2"><div class="field"><label>Cantidad</label><input type="number" id="emp-pens-cant" value="1" min="1" oninput="empCalcPensTotal()"></div>';
+  html+='<div class="field"><label>Total</label><input type="text" id="emp-pens-total" readonly class="total-field" value="S/ 0.00"></div></div>';
+  html+='<div class="field"><label>Nota (opcional)</label><input type="text" id="emp-pens-nota" placeholder="Ej: solo sopa, sin arroz"></div>';
+  html+='<button class="btn" onclick="empAgregarConsumo(\''+pens.id+'\')">Registrar consumo</button>';
+  
+  if(pendientes.length>0){
+    html+='<div class="sl" style="margin-top:18px;margin-bottom:8px">Consumos pendientes</div>';
+    pendientes.slice(0,10).forEach(function(c){
+      html+='<div style="background:#fafbff;border-radius:8px;padding:10px;margin-bottom:6px;display:flex;justify-content:space-between"><div><div style="font-size:13px;font-weight:700">'+(c.cantidad||1)+'x '+c.producto+'</div><div style="font-size:11px;color:#64748b">'+fmtDate(c.fecha)+(c.registradoPor?' · '+c.registradoPor:'')+'</div></div><div style="font-size:14px;font-weight:700;color:#8b0000">S/ '+(c.subtotal||0).toFixed(2)+'</div></div>';
+    });
+    if(pendientes.length>10)html+='<div style="text-align:center;color:#94a3b8;font-size:11px">...y '+(pendientes.length-10)+' más</div>';
+  }
+  
+  html+='</div>';
+  modal.innerHTML=html;
+  modal.style.display='flex';
+  setTimeout(empCalcPensTotal,50);
+}
+
+function empCalcPensTotal(){
+  var sel=document.getElementById('emp-pens-prod');
+  var cant=parseInt(document.getElementById('emp-pens-cant').value)||1;
+  if(!sel)return;
+  var opt=sel.options[sel.selectedIndex];
+  var precio=parseFloat(opt.getAttribute('data-precio'))||0;
+  document.getElementById('emp-pens-total').value='S/ '+(precio*cant).toFixed(2);
+}
+
+function empAgregarConsumo(pensId){
+  var sel=document.getElementById('emp-pens-prod');
+  var cant=parseInt(document.getElementById('emp-pens-cant').value)||1;
+  var nota=document.getElementById('emp-pens-nota').value.trim();
+  if(!sel||cant<1){showToast('Datos incompletos',true);return;}
+  var opt=sel.options[sel.selectedIndex];
+  var producto=opt.getAttribute('data-nombre');
+  var precio=parseFloat(opt.getAttribute('data-precio'))||0;
+  var consumo={
+    producto:producto,cantidad:cant,precioUnit:precio,subtotal:precio*cant,
+    nota:nota,fecha:today(),hora:nowTime(),pagado:false,
+    registradoPor:currentUser?currentUser.nombre:'',
+    timestamp:Date.now()
+  };
+  var ref=db.ref('pensionistas/'+pensId+'/consumos').push();
+  consumo.id=ref.key;
+  ref.set(consumo).then(function(){
+    showToast('Consumo registrado');
+    document.getElementById('emp-pens-modal').style.display='none';
+  });
+}
 function filtrarRecetasEmp(){
   var q=(document.getElementById('emp-rec-buscar').value||'').toLowerCase();
   document.querySelectorAll('.emp-receta-item').forEach(function(el){
