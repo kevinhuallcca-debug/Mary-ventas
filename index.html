@@ -2332,7 +2332,23 @@ function renderEmpDetail(){
   html+='<div class="emp-avatar">'+initials(emp.nombre)+'</div>';
   html+='<div><div style="font-size:17px;font-weight:600">'+emp.nombre+'</div>';
   html+='<div style="font-size:11px;color:#aaa;text-transform:uppercase">'+emp.cargo+' · PIN: '+(emp.pin||'sin PIN')+'</div></div></div>';
-  html+='<button class="btnd" onclick="eliminarPersonal(\''+emp.id+'\')">Eliminar</button></div>';
+  html+='<div style="display:flex;gap:6px"><button class="btnd" style="background:#dbeafe!important;color:#1d4ed8!important" onclick="toggleEditarPersonal(\''+emp.id+'\')">✏️ Editar</button>';
+  html+='<button class="btnd" onclick="eliminarPersonal(\''+emp.id+'\')">Eliminar</button></div></div>';
+  
+  if(window._editandoPersonal===emp.id){
+    html+='<div style="background:#fafbff;border:1.5px solid #e2e8f0;border-radius:14px;padding:14px;margin-top:10px">';
+    html+='<div class="field"><label>Nombre completo</label><input type="text" id="edit-emp-nom" value="'+(emp.nombre||'').replace(/"/g,'&quot;')+'"></div>';
+    html+='<div class="field"><label>Cargo</label><select id="edit-emp-cargo">';
+    ['Mesero','Cocinero','Ayudante','Cajero','Administrador','Otro'].forEach(function(c){
+      html+='<option value="'+c+'"'+(emp.cargo===c?' selected':'')+'>'+c+'</option>';
+    });
+    html+='</select></div>';
+    html+='<div class="field"><label>Sueldo por día (S/)</label><input type="number" id="edit-emp-sueldo" step="0.5" value="'+(emp.sueldoDia||emp.sueldo||0)+'"></div>';
+    html+='<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="guardarEdicionPersonal(\''+emp.id+'\')">Guardar cambios</button>';
+    html+='<button class="btn" style="flex:1;background:#666!important;box-shadow:none!important" onclick="cancelarEdicionPersonal()">Cancelar</button></div>';
+    html+='</div>';
+  }
+  
   html+='<div class="field" style="margin-top:10px"><label>Cambiar PIN</label>';
   html+='<div style="display:flex;gap:8px"><input type="number" id="new-pin" placeholder="Nuevo PIN" style="border:1px solid #e0d5c5;border-radius:8px;padding:7px 11px;font-size:14px;font-family:inherit;width:140px">';
   html+='<button class="btn" style="width:auto;padding:7px 16px;margin:0" onclick="cambiarPin(\''+emp.id+'\')">Guardar</button></div></div>';
@@ -2717,6 +2733,19 @@ function agregarPersonal(){
   db.ref('personal').push({nombre:nom,cargo:cargo,sueldo:sueldo,sueldoDia:sueldo,historialSueldos:[{fecha:today(),monto:sueldo,hora:new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}],pin:pin})
     .then(function(){showToast('Empleado agregado');});
 }
+function toggleEditarPersonal(id){window._editandoPersonal=window._editandoPersonal===id?null:id;render();}
+function cancelarEdicionPersonal(){window._editandoPersonal=null;render();}
+function guardarEdicionPersonal(id){
+  var nom=document.getElementById('edit-emp-nom').value.trim();
+  var cargo=document.getElementById('edit-emp-cargo').value;
+  var sueldo=parseFloat(document.getElementById('edit-emp-sueldo').value)||0;
+  if(!nom){showToast('El nombre es obligatorio',true);return;}
+  db.ref('personal/'+id).update({nombre:nom,cargo:cargo,sueldoDia:sueldo,sueldo:sueldo}).then(function(){
+    window._editandoPersonal=null;
+    showToast('Datos actualizados');
+  });
+}
+
 function cambiarPin(id){
   var pin=document.getElementById('new-pin').value.trim();
   if(!pin||pin.length<4){showToast('PIN invalido',true);return;}
