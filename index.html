@@ -3204,7 +3204,12 @@ function renderMenu(){
   html+='<div style="font-size:24px;font-weight:800;color:#8b0000;margin-top:4px">Día '+diaHoy+' del ciclo</div>';
   html+='<div style="font-size:11px;color:#64748b;margin-top:4px">Ciclo iniciado: '+fmtDate(menuCiclico.fechaInicio)+'</div>';
   html+='</div>';
-  html+='<div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="reiniciarCicloMenu()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Reiniciar ciclo (hoy = Día 1)</button>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">';
+  html+='<label style="font-size:12px;color:#475569;font-weight:700">Inicio del ciclo (Día 1):</label>';
+  html+='<input type="date" id="menu-fecha-inicio" value="'+menuCiclico.fechaInicio+'" style="border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600">';
+  html+='<button onclick="cambiarFechaInicioMenu()" style="background:#8b0000;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Aplicar</button>';
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button onclick="reiniciarCicloMenu()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Reiniciar (hoy = Día 1)</button>';
   html+='<button onclick="verListaCompras()" style="background:#dbeafe;color:#1d4ed8;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🛒 Ver lista de compras</button></div>';
   html+='</div>';
   
@@ -3251,6 +3256,16 @@ function renderMenu(){
 }
 
 function setMenuDia(n){window._menuDiaSel=n;render();}
+
+function cambiarFechaInicioMenu(){
+  var inp=document.getElementById('menu-fecha-inicio');
+  if(!inp||!inp.value){showToast('Selecciona una fecha',true);return;}
+  var fecha=inp.value;
+  if(!confirm('¿Establecer '+fmtDate(fecha)+' como Día 1 del ciclo?'))return;
+  db.ref('menuCiclico/fechaInicio').set(fecha).then(function(){
+    showToast('Fecha de inicio actualizada');
+  });
+}
 
 function reiniciarCicloMenu(){
   if(!confirm('¿Reiniciar ciclo? Hoy se marcará como Día 1.'))return;
