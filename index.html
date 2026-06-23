@@ -1068,12 +1068,24 @@ function renderEmpView(empId){
   });
   var saldo=ganadoEmp-totalAd;
 
+  var empSubTab=window._empSubTab||'resumen';
   var html='<div class="emp-view">';
   html+='<div class="emp-profile-header">';
   html+='<div class="emp-profile-avatar">'+initials(emp.nombre)+'</div>';
   html+='<div class="emp-profile-name">'+emp.nombre+'</div>';
   html+='<div class="emp-profile-cargo">'+emp.cargo+'</div></div>';
   html+='<div style="padding:0 1rem"><div class="readonly-note" style="margin:0 0 1rem">Vista de solo lectura</div></div>';
+  
+  // Sub-navegación de pestañas
+  html+='<div style="display:flex;gap:6px;padding:0 1rem 12px;overflow-x:auto;-webkit-overflow-scrolling:touch">';
+  var empTabs=[{k:'resumen',l:'📊 Resumen'},{k:'recetas',l:'📖 Recetas'},{k:'menu',l:'📅 Menú'}];
+  empTabs.forEach(function(t){
+    var on=empSubTab===t.k;
+    html+='<button onclick="setEmpSubTab(\''+t.k+'\')" style="flex:1;min-width:90px;background:'+(on?'#8b0000':'#fff')+';color:'+(on?'#fff':'#475569')+';border:1.5px solid '+(on?'#8b0000':'#e2e8f0')+';padding:10px 8px;border-radius:100px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;font-family:Nunito,sans-serif">'+t.l+'</button>';
+  });
+  html+='</div>';
+  
+  if(empSubTab==='resumen'){
 
   // Resumen desde ultimo pago
   var diasCompletosEmp=diasT.filter(function(f){return !asisDesde.some(function(a){return a.fecha===f&&(a.estado==='medio tiempo'||a.estado==='descanso pagado');});}).length;
@@ -1151,6 +1163,12 @@ function renderEmpView(empId){
   });}
   html+='</div>';
 
+  } else {
+    html+='<div class="card"><div class="empty">No tienes recetas visibles asignadas.</div></div>';
+  }
+  } // fin recetas
+  
+  if(empSubTab==='menu'){
   // Menú del día (cíclico)
   if(menuCiclico){
     var diaHoy=getDiaCiclo(today());
@@ -1197,24 +1215,9 @@ function renderEmpView(empId){
     }
   }
 
-  // Pensionistas (todos los empleados pueden registrar consumos)
-  if(pensionistas&&pensionistas.length>0){
-    html+='<div class="card"><div class="sl">🧾 Pensionistas - Registrar consumo</div>';
-    html+='<div style="font-size:12px;color:#888;margin-bottom:10px">Toca un pensionista para agregar consumo a su cuenta</div>';
-    pensionistas.forEach(function(p){
-      var consumos=p.consumos?Object.values(p.consumos):[];
-      var pendientes=consumos.filter(function(c){return !c.pagado;});
-      var totalPend=pendientes.reduce(function(a,c){return a+(c.subtotal||0);},0);
-      html+='<div onclick="empSelectPensionista(\''+p.id+'\')" style="background:#fafbff;border:1px solid #e8eaf0;border-radius:14px;padding:12px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px">';
-      html+='<div style="flex:1"><div style="font-size:15px;font-weight:800;color:#0f172a">'+p.nombre+'</div>';
-      html+='<div style="font-size:11px;color:#94a3b8">'+pendientes.length+' pendiente'+(pendientes.length!==1?'s':'')+'</div></div>';
-      if(totalPend>0){html+='<div style="text-align:right"><div style="font-size:10px;color:#64748b">Debe</div><div style="font-size:16px;font-weight:800;color:#8b0000">S/ '+totalPend.toFixed(2)+'</div></div>';}
-      else{html+='<div style="background:#dcfce7;color:#0F6E56;padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700">✓ Sin deuda</div>';}
-      html+='</div>';
-    });
-    html+='</div>';
-  }
-
+  } // fin resumen
+  
+  if(empSubTab==='recetas'){
   // Recetas (solo las visibles para este empleado)
   var recetasVisibles=recetas.filter(function(r){return r.visiblePara&&r.visiblePara.indexOf(empId)>=0;});
   if(recetasVisibles.length>0){
@@ -1246,11 +1249,14 @@ function renderEmpView(empId){
     html+='</div></div>';
   }
 
+  } // fin menu
+  
   html+='</div>';
   document.getElementById('emp-content').innerHTML=html;
   }catch(e){document.getElementById('emp-content').innerHTML='<div style="padding:2rem;color:red;font-weight:bold">ERROR JS: '+e.message+'<br>'+e.stack+'</div>';}
 }
 
+function setEmpSubTab(t){window._empSubTab=t;if(currentUser&&currentUser.personalId)renderEmpView(currentUser.personalId);}
 function setMesEmp(m,empId){filterMes=m;renderEmpView(empId);}
 
 // ── LISTENERS FIREBASE ────────────────────────────────────────
