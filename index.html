@@ -571,6 +571,7 @@ button:focus-visible{outline:2px solid var(--mary-red);outline-offset:2px}
       <button class="nb" onclick="showTab('productos')">Productos</button>
       <button class="nb" onclick="showTab('recetas')">📖 Recetas</button>
       <button class="nb" onclick="showTab('pensionistas')">🧾 Pensionistas</button>
+      <button class="nb" onclick="showTab('menu')">📅 Menú</button>
     </nav>
   <div id="dashboard"></div>
   <div id="nueva" style="display:none"></div>
@@ -579,6 +580,7 @@ button:focus-visible{outline:2px solid var(--mary-red);outline-offset:2px}
   <div id="productos" style="display:none"></div>
   <div id="recetas" style="display:none"></div>
   <div id="pensionistas" style="display:none"></div>
+  <div id="menu" style="display:none"></div>
   <div id="gastos" style="display:none"></div>
   <div id="sesiones" style="display:none"></div>
 </div>
@@ -615,7 +617,7 @@ auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 var db = firebase.database();
 
 var currentUser = null; // { rol: 'admin'|'empleado', personalId, nombre }
-var ventas=[],productos=[],personal=[],asistencias=[],adelantos=[],pagos=[],cajaAperturas=[],gastos=[],recetas=[],pensionistas=[];
+var ventas=[],productos=[],personal=[],asistencias=[],adelantos=[],pagos=[],cajaAperturas=[],gastos=[],recetas=[],pensionistas=[],menuCiclico=null;
 var activeTab='dashboard',filterTurno='todos',filterDate='';
 var selectedEmpId=null,selectedEmpSubTab='asistencia';
 var filterAsisDate='',filterMes='';
@@ -799,6 +801,7 @@ function showCajeroApp(){
     '<button class="nb" data-tab="dashboard" onclick="showTab(\'dashboard\')">Resumen</button>',
     '<button class="nb" data-tab="nueva" onclick="showTab(\'nueva\')">+ Venta</button>',
     '<button class="nb" data-tab="pensionistas" onclick="showTab(\'pensionistas\')">🧾 Pensionistas</button>',
+    '<button class="nb" data-tab="menu" onclick="showTab(\'menu\')">📅 Menú</button>',
     '<button class="nb" data-tab="gastos" onclick="showTab(\'gastos\')">Gastos</button>'
   ].join('');
   showTab('dashboard');
@@ -1006,6 +1009,7 @@ function showAdminApp(){
     '<button class="nb" data-tab="productos" onclick="showTab(\'productos\')">Productos</button>',
     '<button class="nb" data-tab="recetas" onclick="showTab(\'recetas\')">📖 Recetas</button>',
     '<button class="nb" data-tab="pensionistas" onclick="showTab(\'pensionistas\')">🧾 Pensionistas</button>',
+    '<button class="nb" data-tab="menu" onclick="showTab(\'menu\')">📅 Menú</button>',
     '<button class="nb" data-tab="gastos" onclick="showTab(\'gastos\')">Gastos</button>',
     '<button class="nb" data-tab="sesiones" onclick="showTab(\'sesiones\')">🔒 Sesiones</button>'].join('');
   render();
@@ -1147,6 +1151,51 @@ function renderEmpView(empId){
   });}
   html+='</div>';
 
+  // Menú del día (cíclico)
+  if(menuCiclico&&menuCiclico.dias){
+    var diaHoy=getDiaCiclo(today());
+    var manana=new Date();manana.setDate(manana.getDate()+1);
+    var manStr=manana.getFullYear()+'-'+('0'+(manana.getMonth()+1)).slice(-2)+'-'+('0'+manana.getDate()).slice(-2);
+    var diaManana=getDiaCiclo(manStr);
+    var menuHoy=menuCiclico.dias[diaHoy]||{};
+    var menuManana=menuCiclico.dias[diaManana]||{};
+    
+    var tieneHoy=Object.keys(menuHoy).some(function(t){var d=menuHoy[t]||{};return d.sopa||d.seg1||d.seg2;});
+    
+    if(tieneHoy){
+      html+='<div class="card"><div class="sl">📅 Menú de hoy (Día '+diaHoy+')</div>';
+      ['desayuno','almuerzo','cena'].forEach(function(t){
+        var d=menuHoy[t]||{};
+        if(!d.sopa&&!d.seg1&&!d.seg2)return;
+        var icon=t==='desayuno'?'🌅':t==='almuerzo'?'☀️':'🌙';
+        html+='<div style="background:#fafbff;border-radius:10px;padding:12px;margin-bottom:8px;border-left:3px solid #8b0000">';
+        html+='<div style="font-size:13px;font-weight:800;color:#8b0000;margin-bottom:6px">'+icon+' '+t.charAt(0).toUpperCase()+t.slice(1)+'</div>';
+        if(d.sopa)html+='<div style="font-size:13px;margin:2px 0">🍲 <b>Sopa:</b> '+d.sopa+'</div>';
+        if(d.seg1)html+='<div style="font-size:13px;margin:2px 0">🍛 <b>Segundo 1:</b> '+d.seg1+'</div>';
+        if(d.seg2)html+='<div style="font-size:13px;margin:2px 0">🍛 <b>Segundo 2:</b> '+d.seg2+'</div>';
+        html+='</div>';
+      });
+      html+='</div>';
+    }
+    
+    var tieneManana=Object.keys(menuManana).some(function(t){var d=menuManana[t]||{};return d.sopa||d.seg1||d.seg2;});
+    if(tieneManana){
+      html+='<div class="card"><div class="sl">📅 Mañana se cocina (Día '+diaManana+')</div>';
+      ['desayuno','almuerzo','cena'].forEach(function(t){
+        var d=menuManana[t]||{};
+        if(!d.sopa&&!d.seg1&&!d.seg2)return;
+        var icon=t==='desayuno'?'🌅':t==='almuerzo'?'☀️':'🌙';
+        html+='<div style="background:#fafbff;border-radius:10px;padding:12px;margin-bottom:8px;border-left:3px solid #94a3b8">';
+        html+='<div style="font-size:13px;font-weight:800;color:#64748b;margin-bottom:6px">'+icon+' '+t.charAt(0).toUpperCase()+t.slice(1)+'</div>';
+        if(d.sopa)html+='<div style="font-size:13px;margin:2px 0">🍲 <b>Sopa:</b> '+d.sopa+'</div>';
+        if(d.seg1)html+='<div style="font-size:13px;margin:2px 0">🍛 <b>Segundo 1:</b> '+d.seg1+'</div>';
+        if(d.seg2)html+='<div style="font-size:13px;margin:2px 0">🍛 <b>Segundo 2:</b> '+d.seg2+'</div>';
+        html+='</div>';
+      });
+      html+='</div>';
+    }
+  }
+
   // Pensionistas (todos los empleados pueden registrar consumos)
   if(pensionistas&&pensionistas.length>0){
     html+='<div class="card"><div class="sl">🧾 Pensionistas - Registrar consumo</div>';
@@ -1282,6 +1331,10 @@ function startListeners(){
     pensionistas.sort(function(a,b){return(a.nombre||'').localeCompare(b.nombre||'')});
     render();
   });
+  db.ref('menuCiclico').on('value',function(snap){
+    menuCiclico=snap.val()||{fechaInicio:today(),dias:{}};
+    render();refreshEmpView();
+  });
 }
 
 // Cargar personal para el login de empleados (sin autenticacion)
@@ -1311,7 +1364,7 @@ function showTab(name){
     if(dt){b.classList.toggle('on',dt===name);}
     else{b.classList.toggle('on',b.getAttribute('onclick')&&b.getAttribute('onclick').indexOf("'"+name+"'")>-1);}
   });
-  ['dashboard','nueva','historial','personal','productos','recetas','pensionistas','gastos','sesiones'].forEach(function(t){
+  ['dashboard','nueva','historial','personal','productos','recetas','pensionistas','menu','gastos','sesiones'].forEach(function(t){
     document.getElementById(t).style.display=t===name?'block':'none';
   });
   render();
@@ -1326,6 +1379,7 @@ function render(){
   else if(activeTab==='productos')renderProductos();
   else if(activeTab==='recetas')renderRecetas();
   else if(activeTab==='pensionistas')renderPensionistas();
+  else if(activeTab==='menu')renderMenu();
   else if(activeTab==='sesiones')renderSesiones();
 }
 
@@ -3122,6 +3176,165 @@ function guardarGasto(){
 function eliminarGasto(id){
   if(!confirm('¿Eliminar este gasto?'))return;
   db.ref('gastos/'+id).remove().then(function(){showToast('Gasto eliminado');});
+}
+
+function getDiaCiclo(fecha){
+  if(!menuCiclico||!menuCiclico.fechaInicio)return 1;
+  var d1=new Date(menuCiclico.fechaInicio);
+  var d2=new Date(fecha);
+  var diff=Math.floor((d2-d1)/(1000*60*60*24));
+  if(diff<0){diff=diff%14;if(diff<0)diff+=14;}
+  return (diff%14)+1;
+}
+
+function renderMenu(){
+  var cont=document.getElementById('menu');
+  if(!menuCiclico){menuCiclico={fechaInicio:today(),dias:{}};}
+  var dias=menuCiclico.dias||{};
+  var diaHoy=getDiaCiclo(today());
+  var diaSel=window._menuDiaSel||diaHoy;
+  
+  var html='';
+  
+  // Header con info
+  html+='<div class="card">';
+  html+='<div class="sl">📅 Menú Cíclico de 14 días</div>';
+  html+='<div style="background:linear-gradient(135deg,#fef2f3 0%,#fff 100%);border-left:4px solid #8b0000;border-radius:12px;padding:14px;margin-bottom:12px">';
+  html+='<div style="font-size:11px;color:#64748b;letter-spacing:.5px;font-weight:700">HOY ES</div>';
+  html+='<div style="font-size:24px;font-weight:800;color:#8b0000;margin-top:4px">Día '+diaHoy+' del ciclo</div>';
+  html+='<div style="font-size:11px;color:#64748b;margin-top:4px">Ciclo iniciado: '+fmtDate(menuCiclico.fechaInicio)+'</div>';
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="reiniciarCicloMenu()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 Reiniciar ciclo (hoy = Día 1)</button>';
+  html+='<button onclick="verListaCompras()" style="background:#dbeafe;color:#1d4ed8;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🛒 Ver lista de compras</button></div>';
+  html+='</div>';
+  
+  // Selector de días
+  html+='<div class="card">';
+  html+='<div class="sl">Selecciona día para editar</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">';
+  for(var i=1;i<=14;i++){
+    var dia=dias[i]||{};
+    var tieneAlgo=(dia.desayuno&&(dia.desayuno.sopa||dia.desayuno.seg1||dia.desayuno.seg2))||(dia.almuerzo&&(dia.almuerzo.sopa||dia.almuerzo.seg1||dia.almuerzo.seg2))||(dia.cena&&(dia.cena.sopa||dia.cena.seg1||dia.cena.seg2));
+    var esHoy=i===diaHoy;
+    var esSel=i===diaSel;
+    var bg=esSel?'#8b0000':(esHoy?'#fef3c7':(tieneAlgo?'#dcfce7':'#f1f5f9'));
+    var color=esSel?'#fff':(esHoy?'#92400e':(tieneAlgo?'#0F6E56':'#475569'));
+    html+='<button onclick="setMenuDia('+i+')" style="background:'+bg+';color:'+color+';border:none;padding:10px 4px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">'+i+(esHoy?' ★':'')+'</button>';
+  }
+  html+='</div>';
+  html+='<div style="font-size:11px;color:#94a3b8;margin-top:8px">★ = Día actual · Verde = ya planificado · Rojo = seleccionado</div>';
+  html+='</div>';
+  
+  // Editor del día seleccionado
+  var diaData=dias[diaSel]||{desayuno:{},almuerzo:{},cena:{}};
+  html+='<div class="card"><div class="sl">📝 Editando Día '+diaSel+'</div>';
+  
+  ['desayuno','almuerzo','cena'].forEach(function(turno){
+    var icon=turno==='desayuno'?'🌅':turno==='almuerzo'?'☀️':'🌙';
+    var d=diaData[turno]||{};
+    html+='<div style="background:#fafbff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px">';
+    html+='<div style="font-size:14px;font-weight:800;color:#8b0000;margin-bottom:8px">'+icon+' '+turno.charAt(0).toUpperCase()+turno.slice(1)+'</div>';
+    html+='<div class="field"><label>🍲 Sopa</label><input type="text" id="menu-'+turno+'-sopa" value="'+(d.sopa||'').replace(/"/g,'&quot;')+'" placeholder="Ej: Sopa de quinua"></div>';
+    html+='<div class="field"><label>🍛 Segundo 1</label><input type="text" id="menu-'+turno+'-seg1" value="'+(d.seg1||'').replace(/"/g,'&quot;')+'" placeholder="Ej: Lomo saltado"></div>';
+    html+='<div class="field"><label>🍛 Segundo 2</label><input type="text" id="menu-'+turno+'-seg2" value="'+(d.seg2||'').replace(/"/g,'&quot;')+'" placeholder="Ej: Pollo al horno"></div>';
+    html+='<div class="field"><label>🛒 Ingredientes a comprar (uno por línea)</label><textarea id="menu-'+turno+'-ing" rows="3" style="width:100%;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 12px;font-size:13px;font-family:Nunito,sans-serif;font-weight:600;background:#fff;resize:vertical" placeholder="Ej:&#10;2 kg de carne de res&#10;1 kg de cebolla&#10;Aji panca al gusto">'+(d.ingredientes||'')+'</textarea></div>';
+    html+='</div>';
+  });
+  
+  html+='<button class="btn" onclick="guardarDiaMenu('+diaSel+')">Guardar Día '+diaSel+'</button>';
+  if(diaSel>1){
+    html+='<button class="btn" style="margin-top:8px;background:#f1f5f9!important;color:#475569!important;box-shadow:none!important" onclick="copiarDiaMenu('+(diaSel-1)+','+diaSel+')">📋 Copiar del Día '+(diaSel-1)+'</button>';
+  }
+  html+='</div>';
+  
+  cont.innerHTML=html;
+}
+
+function setMenuDia(n){window._menuDiaSel=n;render();}
+
+function reiniciarCicloMenu(){
+  if(!confirm('¿Reiniciar ciclo? Hoy se marcará como Día 1.'))return;
+  db.ref('menuCiclico/fechaInicio').set(today()).then(function(){
+    showToast('Ciclo reiniciado');
+  });
+}
+
+function guardarDiaMenu(n){
+  var data={desayuno:{},almuerzo:{},cena:{}};
+  ['desayuno','almuerzo','cena'].forEach(function(turno){
+    data[turno]={
+      sopa:document.getElementById('menu-'+turno+'-sopa').value.trim(),
+      seg1:document.getElementById('menu-'+turno+'-seg1').value.trim(),
+      seg2:document.getElementById('menu-'+turno+'-seg2').value.trim(),
+      ingredientes:document.getElementById('menu-'+turno+'-ing').value.trim()
+    };
+  });
+  db.ref('menuCiclico/dias/'+n).set(data).then(function(){
+    showToast('Día '+n+' guardado');
+  });
+}
+
+function copiarDiaMenu(origen,destino){
+  if(!menuCiclico||!menuCiclico.dias||!menuCiclico.dias[origen]){showToast('El día origen está vacío',true);return;}
+  if(!confirm('¿Copiar el menú del Día '+origen+' al Día '+destino+'? Se perderá lo escrito actualmente.'))return;
+  var data=JSON.parse(JSON.stringify(menuCiclico.dias[origen]));
+  db.ref('menuCiclico/dias/'+destino).set(data).then(function(){
+    showToast('Día '+origen+' copiado al '+destino);
+  });
+}
+
+function verListaCompras(){
+  var dias=(menuCiclico&&menuCiclico.dias)||{};
+  // Acumular ingredientes de TODOS los 14 días
+  var todosIng=[];
+  for(var i=1;i<=14;i++){
+    var d=dias[i];
+    if(!d)continue;
+    ['desayuno','almuerzo','cena'].forEach(function(t){
+      var ing=(d[t]||{}).ingredientes;
+      if(ing){
+        ing.split('\n').forEach(function(line){
+          var l=line.trim();if(l)todosIng.push({dia:i,turno:t,ing:l});
+        });
+      }
+    });
+  }
+  
+  var modal=document.getElementById('lista-compras-modal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='lista-compras-modal';
+    modal.style.cssText='display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:flex-end;justify-content:center';
+    modal.onclick=function(e){if(e.target===modal)modal.style.display='none';};
+    document.body.appendChild(modal);
+  }
+  
+  var html='<div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;padding:24px 20px 32px">';
+  html+='<div style="width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:-8px auto 16px"></div>';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:18px;font-weight:800">🛒 Lista de compras (14 días)</div>';
+  html+='<button onclick="document.getElementById(\'lista-compras-modal\').style.display=\'none\'" style="background:#f1f5f9;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;color:#64748b">✕</button></div>';
+  
+  if(todosIng.length===0){
+    html+='<div style="text-align:center;padding:2rem;color:#94a3b8">Aún no hay ingredientes agregados al menú.<br>Agrégalos en cada día del ciclo.</div>';
+  } else {
+    // Agrupar ingredientes iguales
+    var agrupado={};
+    todosIng.forEach(function(x){
+      var k=x.ing.toLowerCase();
+      if(!agrupado[k])agrupado[k]={ing:x.ing,veces:0,dias:[]};
+      agrupado[k].veces++;
+      agrupado[k].dias.push('D'+x.dia+'/'+x.turno.charAt(0).toUpperCase());
+    });
+    var arr=Object.values(agrupado).sort(function(a,b){return b.veces-a.veces;});
+    html+='<div style="background:#f0faf5;border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;color:#0F6E56"><b>'+arr.length+'</b> ingredientes únicos · <b>'+todosIng.length+'</b> usos totales</div>';
+    arr.forEach(function(x){
+      html+='<div style="background:#fafbff;border:1px solid #e8eaf0;border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center"><div style="flex:1"><div style="font-size:14px;font-weight:700">'+x.ing+'</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">'+x.dias.join(' · ')+'</div></div><div style="background:#8b0000;color:#fff;border-radius:100px;padding:3px 10px;font-size:11px;font-weight:700">x'+x.veces+'</div></div>';
+    });
+  }
+  
+  html+='</div>';
+  modal.innerHTML=html;
+  modal.style.display='flex';
 }
 
 function renderPensionistas(){
