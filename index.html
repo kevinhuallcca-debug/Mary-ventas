@@ -3275,7 +3275,12 @@ function renderMenu(){
   cont.innerHTML=html;
 }
 
-function setMenuDia(n){window._menuDiaSel=n;render();}
+function setMenuDia(n){
+  window._menuDiaSel=n;
+  // Asegurarse de que el tab activo siga siendo menu y llamar directamente
+  activeTab='menu';
+  renderMenu();
+}
 
 function cambiarFechaInicioMenu(){
   var inp=document.getElementById('menu-fecha-inicio');
