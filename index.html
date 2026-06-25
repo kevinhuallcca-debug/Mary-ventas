@@ -3276,10 +3276,15 @@ function renderMenu(){
 }
 
 function setMenuDia(n){
-  window._menuDiaSel=n;
-  // Asegurarse de que el tab activo siga siendo menu y llamar directamente
+  console.log('setMenuDia llamado con',n);
+  window._menuDiaSel=parseInt(n);
   activeTab='menu';
-  renderMenu();
+  try{renderMenu();}catch(e){alert('Error en setMenuDia: '+e.message);}
+  // Scroll al editor
+  setTimeout(function(){
+    var editor=document.querySelector('#menu .card:last-child');
+    if(editor)editor.scrollIntoView({behavior:'smooth',block:'start'});
+  },100);
 }
 
 function cambiarFechaInicioMenu(){
