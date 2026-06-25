@@ -1163,8 +1163,38 @@ function renderEmpView(empId){
   });}
   html+='</div>';
 
-  } else {
-    html+='<div class="card"><div class="empty">No tienes recetas visibles asignadas.</div></div>';
+  } // fin resumen
+  
+  if(empSubTab==='recetas'){
+  // Recetas (solo las visibles para este empleado)
+  var recetasVisibles=recetas.filter(function(r){return r.visiblePara&&r.visiblePara.indexOf(empId)>=0;});
+  if(recetasVisibles.length>0){
+    html+='<div class="card"><div class="sl">📖 Recetas del restaurante</div>';
+    html+='<div class="field"><input type="text" id="emp-rec-buscar" placeholder="🔍 Buscar receta..." oninput="filtrarRecetasEmp()" style="margin-bottom:10px"></div>';
+    html+='<div id="emp-rec-lista">';
+    var porCatE={};
+    recetasVisibles.forEach(function(r){var c=r.categoria||'Otros';if(!porCatE[c])porCatE[c]=[];porCatE[c].push(r);});
+    Object.keys(porCatE).sort().forEach(function(cat){
+      html+='<div style="margin:14px 0 6px;font-size:11px;font-weight:800;color:#c1121f;letter-spacing:.8px">'+cat.toUpperCase()+'</div>';
+      porCatE[cat].forEach(function(r){
+        html+='<div class="emp-receta-item" data-nombre="'+(r.nombre||'').toLowerCase()+'" style="background:#fafbff;border:1px solid #e8eaf0;border-radius:14px;padding:12px;margin-bottom:8px">';
+        html+='<div style="font-size:15px;font-weight:800;color:#0f172a">'+r.nombre+'</div>';
+        if(r.rinde){html+='<div style="font-size:11px;color:#64748b;margin-top:2px">Rinde: '+r.rinde+'</div>';}
+        if(r.ingredientes){
+          html+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e8eaf0"><div style="font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:4px">INGREDIENTES</div>';
+          html+='<div style="font-size:13px;color:#0f172a;white-space:pre-line;line-height:1.5">'+r.ingredientes+'</div></div>';
+        }
+        if(r.pasos){
+          html+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e8eaf0"><div style="font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:4px">PREPARACIÓN</div>';
+          html+='<div style="font-size:13px;color:#0f172a;white-space:pre-line;line-height:1.5">'+r.pasos+'</div></div>';
+        }
+        if(r.notas){
+          html+='<div style="margin-top:8px;padding:8px 10px;background:#fef3c7;border-radius:8px;font-size:12px;color:#92400e"><b>💡 Tip:</b> '+r.notas+'</div>';
+        }
+        html+='</div>';
+      });
+    });
+    html+='</div></div>';
   }
   } // fin recetas
   
@@ -1214,41 +1244,6 @@ function renderEmpView(empId){
       html+='</div>';
     }
   }
-
-  } // fin resumen
-  
-  if(empSubTab==='recetas'){
-  // Recetas (solo las visibles para este empleado)
-  var recetasVisibles=recetas.filter(function(r){return r.visiblePara&&r.visiblePara.indexOf(empId)>=0;});
-  if(recetasVisibles.length>0){
-    html+='<div class="card"><div class="sl">📖 Recetas del restaurante</div>';
-    html+='<div class="field"><input type="text" id="emp-rec-buscar" placeholder="🔍 Buscar receta..." oninput="filtrarRecetasEmp()" style="margin-bottom:10px"></div>';
-    html+='<div id="emp-rec-lista">';
-    var porCatE={};
-    recetasVisibles.forEach(function(r){var c=r.categoria||'Otros';if(!porCatE[c])porCatE[c]=[];porCatE[c].push(r);});
-    Object.keys(porCatE).sort().forEach(function(cat){
-      html+='<div style="margin:14px 0 6px;font-size:11px;font-weight:800;color:#c1121f;letter-spacing:.8px">'+cat.toUpperCase()+'</div>';
-      porCatE[cat].forEach(function(r){
-        html+='<div class="emp-receta-item" data-nombre="'+(r.nombre||'').toLowerCase()+'" style="background:#fafbff;border:1px solid #e8eaf0;border-radius:14px;padding:12px;margin-bottom:8px">';
-        html+='<div style="font-size:15px;font-weight:800;color:#0f172a">'+r.nombre+'</div>';
-        if(r.rinde){html+='<div style="font-size:11px;color:#64748b;margin-top:2px">Rinde: '+r.rinde+'</div>';}
-        if(r.ingredientes){
-          html+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e8eaf0"><div style="font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:4px">INGREDIENTES</div>';
-          html+='<div style="font-size:13px;color:#0f172a;white-space:pre-line;line-height:1.5">'+r.ingredientes+'</div></div>';
-        }
-        if(r.pasos){
-          html+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e8eaf0"><div style="font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:4px">PREPARACIÓN</div>';
-          html+='<div style="font-size:13px;color:#0f172a;white-space:pre-line;line-height:1.5">'+r.pasos+'</div></div>';
-        }
-        if(r.notas){
-          html+='<div style="margin-top:8px;padding:8px 10px;background:#fef3c7;border-radius:8px;font-size:12px;color:#92400e"><b>💡 Tip:</b> '+r.notas+'</div>';
-        }
-        html+='</div>';
-      });
-    });
-    html+='</div></div>';
-  }
-
   } // fin menu
   
   html+='</div>';
