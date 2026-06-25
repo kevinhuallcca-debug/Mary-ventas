@@ -633,7 +633,7 @@ var defaultProductos=[
 
 function today(){var n=new Date();return n.getFullYear()+'-'+(n.getMonth()+1<10?'0':'')+(n.getMonth()+1)+'-'+(n.getDate()<10?'0':'')+n.getDate()}
 function mesActual(){return today().slice(0,7)}
-function fmtDate(d){var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
+function fmtDate(d){if(!d||typeof d!=='string')return'-';var p=d.split('-');if(p.length<3)return d;return p[2]+'/'+p[1]+'/'+p[0]}
 function fmt(n){return'S/ '+parseFloat(n).toFixed(2)}
 function turnoClass(t){return t==='desayuno'?'bd':t==='almuerzo'?'ba':t==='cena'?'bc':t==='bebidas'?'bg':'bp'}
 function turnoLabel(t){if(!t)return'Otros';return t.charAt(0).toUpperCase()+t.slice(1)}
